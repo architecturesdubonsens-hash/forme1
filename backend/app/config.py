@@ -1,11 +1,9 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-    supabase_url: str
-    supabase_service_key: str
-    anthropic_api_key: str
-    allowed_origins: str = "http://localhost:3000"
+class Settings:
+    supabase_url: str = os.environ["SUPABASE_URL"]
+    supabase_service_key: str = os.environ["SUPABASE_SERVICE_KEY"]
+    anthropic_api_key: str = os.environ["ANTHROPIC_API_KEY"]
+    allowed_origins: str = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
 
 settings = Settings()
