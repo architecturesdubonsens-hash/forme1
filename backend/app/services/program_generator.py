@@ -150,7 +150,7 @@ Chaque séance doit :
 - Durer environ {duration} minutes
 - Être adaptée à l'équipement et au niveau de l'utilisateur
 - Comporter 3 blocs : échauffement, travail principal, retour au calme
-- Inclure pour chaque exercice : sets, reps/durée, RPE cible, note de charge (max 6 mots), 2 cues max (max 5 mots chacun), demo_url toujours null
+- Inclure pour chaque exercice : sets, reps/durée, RPE cible, note de charge (max 6 mots), 2 cues max (max 5 mots chacun), demo_url : URL de recherche YouTube du mouvement (ex: "https://www.youtube.com/results?search_query=squat+technique+form")
 - Avoir un champ "strategic_context" : 1 phrase courte (max 15 mots)
 - Avoir un champ "objectives_targeted" (liste parmi : fat_loss, muscle, vo2max, mobility)
 
@@ -179,7 +179,7 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après, au format :
           "rest_sec": 30,
           "rpe_target": 4,
           "load_notes": "...",
-          "demo_url": null,
+          "demo_url": "https://www.youtube.com/results?search_query=nom+exercice+technique+form",
           "cues": ["...", "..."]
         }}
       ]
