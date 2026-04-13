@@ -83,7 +83,17 @@ fondées sur la littérature scientifique récente dans les domaines suivants :
 """
 
 
-def _build_user_context(profile: dict, wearable_recent: list[dict]) -> str:
+_DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+_SCHEDULE_DESC = {
+    "free":         "Libre — disponible pour séance normale",
+    "long_session": "Disponible pour séance longue (90 min+)",
+    "office":       "Journée bureau / sédentaire — séance possible le matin ou soir",
+    "busy":         "Journée chargée — peu de temps, snack fitness seulement",
+    "travel":       "Déplacement / voyage — pas de salle, poids de corps uniquement",
+    "hotel":        "Nuit à l'hôtel — chambre disponible, pas d'équipement",
+}
+
+def _build_user_context(profile: dict, wearable_recent: list[dict], week_schedule: list[dict] | None = None) -> str:
     """Construit le contexte utilisateur personnalisé pour le prompt."""
     age = date.today().year - profile.get("birth_year", 1970)
     recovery = None
@@ -107,6 +117,15 @@ def _build_user_context(profile: dict, wearable_recent: list[dict]) -> str:
         f"- Mobilité fonctionnelle : {profile.get('goal_mobility', 25)}%",
         f"- VO2max : {profile.get('goal_vo2max', 25)}%",
     ]
+
+    if week_schedule:
+        lines += ["", "## Planning de la semaine"]
+        for d in week_schedule:
+            day_label = _DAY_LABELS[d.get("day", 0)]
+            day_type = d.get("type", "free")
+            desc = _SCHEDULE_DESC.get(day_type, day_type)
+            lines.append(f"- {day_label} ({d.get('date', '')}) : {desc}")
+        lines.append("→ Place les séances intenses sur les jours libres. Sur les jours voyage/hôtel, propose uniquement du snack fitness ou poids de corps.")
 
     if profile.get("sport_history"):
         lines.append(f"- Sports pratiqués par le passé : {', '.join(profile['sport_history'])}")
@@ -135,12 +154,13 @@ async def generate_weekly_program(
     wearable_recent: list[dict],
     week_number: int,
     week_start: date,
+    week_schedule: list[dict] | None = None,
 ) -> list[GeneratedSession]:
     """
     Génère un programme hebdomadaire complet via Claude.
     Retourne une liste de séances structurées.
     """
-    user_context = _build_user_context(profile, wearable_recent)
+    user_context = _build_user_context(profile, wearable_recent, week_schedule or [])
     sessions_count = profile.get("sessions_per_week", 4)
     duration = profile.get("session_duration_min", 60)
 

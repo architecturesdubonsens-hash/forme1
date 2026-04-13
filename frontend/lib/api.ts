@@ -35,11 +35,16 @@ export function syncWearable(userId: string, data: object) {
 
 // ── Programme ─────────────────────────────────────────────────────────────────
 
-export function generateProgram(userId: string, weekNumber: number, weekStart: string) {
+export function generateProgram(userId: string, weekNumber: number, weekStart: string, weekSchedule?: object[]) {
   return request("/api/program/generate", {
     method: "POST",
     userId,
-    body: JSON.stringify({ user_id: userId, week_number: weekNumber, week_start: weekStart }),
+    body: JSON.stringify({
+      user_id: userId,
+      week_number: weekNumber,
+      week_start: weekStart,
+      week_schedule: weekSchedule ?? [],
+    }),
   });
 }
 

@@ -76,6 +76,7 @@ async def generate_program(
         wearable_recent=wearable_data,
         week_number=req.week_number,
         week_start=req.week_start,
+        week_schedule=[d.model_dump() for d in req.week_schedule],
     )
 
     # Calcul de la fin de semaine

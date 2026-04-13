@@ -7,6 +7,7 @@ import { getCurrentProgram, generateProgram } from "@/lib/api";
 import SessionCard from "@/components/SessionCard";
 import RecoveryBadge from "@/components/RecoveryBadge";
 import BottomNav from "@/components/BottomNav";
+import WeekSchedulePicker, { type DaySchedule } from "@/components/WeekSchedulePicker";
 
 const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -16,6 +17,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [userName, setUserName] = useState("");
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
+  const [pendingWeekStart, setPendingWeekStart] = useState<Date | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -44,20 +47,32 @@ export default function Dashboard() {
     init();
   }, [router]);
 
-  const handleGenerate = async () => {
+  const getMondayOfWeek = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    return monday;
+  };
+
+  // Ouvre le picker de semaine avant de générer
+  const openSchedulePicker = () => {
+    setPendingWeekStart(getMondayOfWeek());
+    setShowSchedulePicker(true);
+  };
+
+  // Appelé quand l'utilisateur confirme le planning
+  const handleGenerate = async (schedule: DaySchedule[]) => {
     if (!userId) return;
+    setShowSchedulePicker(false);
     setGenerating(true);
     try {
-      const today = new Date();
-      // Lundi de la semaine courante
-      const day = today.getDay();
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+      const monday = getMondayOfWeek();
       const weekStart = monday.toISOString().split("T")[0];
       const weekNumber = Math.ceil(
         (monday.getTime() - new Date(monday.getFullYear(), 0, 1).getTime()) / 604800000
       );
-      const result = await generateProgram(userId, weekNumber, weekStart);
+      const result = await generateProgram(userId, weekNumber, weekStart, schedule);
       setProgram(result);
     } catch (e) {
       console.error(e);
@@ -105,7 +120,7 @@ export default function Dashboard() {
             Je génère votre première semaine d'entraînement personnalisée en quelques secondes.
           </p>
           <button
-            onClick={handleGenerate}
+            onClick={openSchedulePicker}
             disabled={generating}
             className="w-full py-3 bg-brand-500 rounded-xl font-semibold text-white hover:bg-brand-600 transition disabled:opacity-50"
           >
@@ -127,7 +142,7 @@ export default function Dashboard() {
               Cette semaine
             </h2>
             <button
-              onClick={handleGenerate}
+              onClick={openSchedulePicker}
               disabled={generating}
               className="text-xs text-brand-400 hover:text-brand-300 transition disabled:opacity-50"
             >
@@ -170,6 +185,14 @@ export default function Dashboard() {
         </>
       )}
       <BottomNav active="dashboard" />
+
+      {showSchedulePicker && pendingWeekStart && (
+        <WeekSchedulePicker
+          weekStart={pendingWeekStart}
+          onConfirm={handleGenerate}
+          onCancel={() => setShowSchedulePicker(false)}
+        />
+      )}
     </div>
   );
 }

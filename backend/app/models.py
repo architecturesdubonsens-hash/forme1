@@ -85,11 +85,17 @@ class FeedbackCreate(BaseModel):
 
 # ── Génération de programme ───────────────────────────────────────────────────
 
+class DaySchedule(BaseModel):
+    day: int           # 0=lun … 6=dim
+    date: str          # "2026-04-14"
+    type: str          # free | office | travel | hotel | busy | long_session
+
 class ProgramGenerationRequest(BaseModel):
     """Paramètres envoyés au moteur IA pour générer une semaine de programme."""
     user_id: UUID
     week_number: int = 1
     week_start: date
+    week_schedule: list[DaySchedule] = []
 
 class GeneratedSession(BaseModel):
     """Une séance dans le programme généré par Claude."""
