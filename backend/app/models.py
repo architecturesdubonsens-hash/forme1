@@ -27,6 +27,9 @@ class ProfileCreate(BaseModel):
     equipment: list[str] = []
     medical_notes: Optional[str] = None
     injury_history: list[str] = []
+    sport_history: list[str] = []
+    preferred_activities: list[str] = []
+    specific_goal: Optional[str] = None
 
 class ProfileRead(ProfileCreate):
     id: UUID

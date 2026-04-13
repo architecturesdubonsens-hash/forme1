@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
 import StepIdentite from "./steps/StepIdentite";
 import StepObjectifs from "./steps/StepObjectifs";
+import StepHistorique from "./steps/StepHistorique";
 import StepDisponibilite from "./steps/StepDisponibilite";
 import StepEquipement from "./steps/StepEquipement";
 import StepSante from "./steps/StepSante";
@@ -25,6 +26,9 @@ export type ProfileDraft = {
   equipment: string[];
   medical_notes: string;
   injury_history: string[];
+  sport_history: string[];
+  preferred_activities: string[];
+  specific_goal: string;
 };
 
 const INITIAL: ProfileDraft = {
@@ -43,14 +47,18 @@ const INITIAL: ProfileDraft = {
   equipment: [],
   medical_notes: "",
   injury_history: [],
+  sport_history: [],
+  preferred_activities: [],
+  specific_goal: "",
 };
 
 const STEPS = [
-  { label: "Identité", component: StepIdentite },
-  { label: "Objectifs", component: StepObjectifs },
-  { label: "Disponibilité", component: StepDisponibilite },
-  { label: "Équipement", component: StepEquipement },
-  { label: "Santé", component: StepSante },
+  { label: "Identité",            component: StepIdentite },
+  { label: "Objectifs",           component: StepObjectifs },
+  { label: "Historique",          component: StepHistorique },
+  { label: "Disponibilité",       component: StepDisponibilite },
+  { label: "Équipement",          component: StepEquipement },
+  { label: "Santé",               component: StepSante },
 ];
 
 export default function OnboardingPage() {

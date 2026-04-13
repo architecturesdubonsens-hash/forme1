@@ -108,6 +108,12 @@ def _build_user_context(profile: dict, wearable_recent: list[dict]) -> str:
         f"- VO2max : {profile.get('goal_vo2max', 25)}%",
     ]
 
+    if profile.get("sport_history"):
+        lines.append(f"- Sports pratiqués par le passé : {', '.join(profile['sport_history'])}")
+    if profile.get("preferred_activities"):
+        lines.append(f"- Activités préférées : {', '.join(profile['preferred_activities'])} — à privilégier quand compatible avec les objectifs")
+    if profile.get("specific_goal"):
+        lines.append(f"- Objectif événementiel : {profile['specific_goal']} — orienter la programmation vers cet objectif sans sacrifier les 4 axes de santé")
     if profile.get("medical_notes"):
         lines.append(f"- Notes médicales : {profile['medical_notes']}")
     if profile.get("injury_history"):
