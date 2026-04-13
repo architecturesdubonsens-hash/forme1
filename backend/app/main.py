@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import wearable, program, feedback, challenges
+from app.routers import wearable, program, feedback, challenges, snacks
 
 app = FastAPI(
     title="Forme 1 API",
@@ -32,6 +32,7 @@ app.include_router(wearable.router)
 app.include_router(program.router)
 app.include_router(feedback.router)
 app.include_router(challenges.router)
+app.include_router(snacks.router)
 
 
 @app.get("/health")

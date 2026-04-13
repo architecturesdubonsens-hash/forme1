@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 
-type Tab = "dashboard" | "program" | "challenges" | "profile";
+type Tab = "dashboard" | "snacks" | "challenges" | "program" | "profile";
 
 const TABS: { key: Tab; href: string; icon: string; label: string }[] = [
   { key: "dashboard",  href: "/dashboard",  icon: "🏠", label: "Semaine" },
-  { key: "program",    href: "/program",    icon: "📊", label: "Programme" },
+  { key: "snacks",     href: "/snacks",     icon: "⚡", label: "Snacks" },
   { key: "challenges", href: "/challenges", icon: "🎯", label: "Défis" },
+  { key: "program",    href: "/program",    icon: "📊", label: "Progression" },
   { key: "profile",    href: "/profile",    icon: "👤", label: "Profil" },
 ];
 
@@ -18,12 +19,12 @@ export default function BottomNav({ active }: { active: Tab }) {
           <Link
             key={tab.key}
             href={tab.href}
-            className={`flex-1 flex flex-col items-center py-3 gap-0.5 transition ${
+            className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition ${
               active === tab.key ? "text-brand-400" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            <span className="text-xl leading-none">{tab.icon}</span>
-            <span className="text-xs font-medium">{tab.label}</span>
+            <span className="text-lg leading-none">{tab.icon}</span>
+            <span className="text-[10px] font-medium">{tab.label}</span>
             {active === tab.key && (
               <span className="absolute bottom-1 w-1 h-1 bg-brand-400 rounded-full" />
             )}

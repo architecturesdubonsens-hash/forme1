@@ -52,6 +52,21 @@ export function getCurrentProgram(userId: string) {
   return request("/api/program/current", { userId });
 }
 
+// ── Snacks ────────────────────────────────────────────────────────────────────
+
+export function listSnacks(params?: { duration?: number; context?: string; category?: string }) {
+  const qs = new URLSearchParams();
+  if (params?.duration)  qs.set("duration",  String(params.duration));
+  if (params?.context)   qs.set("context",   params.context);
+  if (params?.category)  qs.set("category",  params.category);
+  const query = qs.toString() ? `?${qs}` : "";
+  return request<any[]>(`/api/snacks${query}`);
+}
+
+export function recommendedSnacks(userId: string) {
+  return request<any[]>("/api/snacks/recommended", { userId });
+}
+
 // ── Feedback ──────────────────────────────────────────────────────────────────
 
 export function submitFeedback(userId: string, sessionId: string, data: object) {

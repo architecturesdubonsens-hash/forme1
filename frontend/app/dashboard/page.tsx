@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase";
-import { getCurrentProgram, generateProgram } from "@/lib/api";
+import { getCurrentProgram, generateProgram, recommendedSnacks } from "@/lib/api";
 import SessionCard from "@/components/SessionCard";
 import RecoveryBadge from "@/components/RecoveryBadge";
 import BottomNav from "@/components/BottomNav";
 import WeekSchedulePicker, { type DaySchedule } from "@/components/WeekSchedulePicker";
+import SnackCard, { type SnackActivity } from "@/components/SnackCard";
+import SnackPlayer from "@/components/SnackPlayer";
+import { AnimatePresence } from "framer-motion";
 
 const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -19,6 +22,8 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [pendingWeekStart, setPendingWeekStart] = useState<Date | null>(null);
+  const [snacks, setSnacks] = useState<SnackActivity[]>([]);
+  const [playingSnack, setPlayingSnack] = useState<SnackActivity | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,15 +39,14 @@ export default function Dashboard() {
         .from("profiles").select("first_name").eq("id", user.id).single();
       if (profile?.first_name) setUserName(profile.first_name);
 
-      // Récupère le programme en cours
-      try {
-        const prog = await getCurrentProgram(user.id);
-        setProgram(prog);
-      } catch {
-        setProgram(null); // pas encore de programme → affiche le CTA
-      } finally {
-        setLoading(false);
-      }
+      // Récupère le programme en cours + snacks recommandés en parallèle
+      const [progResult, snackResult] = await Promise.allSettled([
+        getCurrentProgram(user.id),
+        recommendedSnacks(user.id),
+      ]);
+      setProgram(progResult.status === "fulfilled" ? progResult.value : null);
+      if (snackResult.status === "fulfilled") setSnacks(snackResult.value as SnackActivity[]);
+      setLoading(false);
     };
     init();
   }, [router]);
@@ -184,6 +188,26 @@ export default function Dashboard() {
           </div>
         </>
       )}
+
+      {/* Widget Snacks du moment */}
+      {snacks.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              ⚡ Snacks du moment
+            </h2>
+            <a href="/snacks" className="text-xs text-brand-400 hover:text-brand-300 transition">
+              Voir tout
+            </a>
+          </div>
+          <div className="space-y-2">
+            {snacks.slice(0, 2).map((s) => (
+              <SnackCard key={s.id} snack={s} onPlay={setPlayingSnack} compact />
+            ))}
+          </div>
+        </div>
+      )}
+
       <BottomNav active="dashboard" />
 
       {showSchedulePicker && pendingWeekStart && (
@@ -193,6 +217,20 @@ export default function Dashboard() {
           onCancel={() => setShowSchedulePicker(false)}
         />
       )}
+
+      <AnimatePresence>
+        {playingSnack && (
+          <motion.div
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 260 }}
+            className="fixed inset-0 z-50"
+          >
+            <SnackPlayer snack={playingSnack} onClose={() => setPlayingSnack(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
