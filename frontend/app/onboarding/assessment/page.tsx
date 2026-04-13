@@ -151,11 +151,17 @@ export default function AssessmentPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        {/* Progression */}
-        <div className="flex gap-1.5 mb-6">
-          {tests.map((_, i) => (
-            <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-brand-500" : "bg-surface-muted"}`} />
-          ))}
+        {/* Progression — étape 6/6 dans le flux onboarding */}
+        <div className="mb-4">
+          <div className="flex gap-1.5">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-1 flex-1 rounded-full bg-brand-500" />
+            ))}
+            <div className="h-1 flex-1 rounded-full bg-brand-500" />
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            Étape 6 sur 6 — Évaluation physique ({step + 1}/{tests.length})
+          </p>
         </div>
 
         <AnimatePresence mode="wait">

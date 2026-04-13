@@ -71,15 +71,22 @@ export default function OnboardingPage() {
     setError("");
     try {
       const supabase = createClient();
-      const { data: { user }, error: authErr } = await supabase.auth.signInAnonymously();
-      if (authErr || !user) throw new Error("Connexion impossible.");
+
+      // Utilise l'utilisateur connecté si disponible, sinon session anonyme
+      let { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const { data, error: authErr } = await supabase.auth.signInAnonymously();
+        if (authErr || !data.user) throw new Error("Connexion impossible.");
+        user = data.user;
+      }
 
       const { error: profileErr } = await supabase
         .from("profiles")
         .upsert({ id: user.id, ...draft });
       if (profileErr) throw new Error(profileErr.message);
 
-      router.push("/dashboard");
+      // Redirige vers l'assessment après le profil
+      router.push("/onboarding/assessment");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erreur inattendue.");
     } finally {
@@ -113,7 +120,7 @@ export default function OnboardingPage() {
           ))}
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          Étape {step + 1} sur {STEPS.length} — {STEPS[step].label}
+          Étape {step + 1} sur {STEPS.length + 1} — {STEPS[step].label}
         </p>
       </div>
 
@@ -151,7 +158,7 @@ export default function OnboardingPage() {
             disabled={loading}
             className="flex-1 py-3 rounded-xl bg-brand-500 text-white font-semibold hover:bg-brand-600 transition disabled:opacity-50"
           >
-            {loading ? "Enregistrement…" : isLast ? "Lancer mon programme" : "Continuer"}
+            {loading ? "Enregistrement…" : isLast ? "Continuer vers les tests" : "Continuer"}
           </button>
         </div>
       </div>
