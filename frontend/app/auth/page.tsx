@@ -23,7 +23,12 @@ export default function AuthPage() {
 
     try {
       if (mode === "signup") {
-        const { error: e } = await supabase.auth.signUp({ email, password });
+        const redirectTo = `${window.location.origin}/auth/callback`;
+        const { error: e } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: redirectTo },
+        });
         if (e) throw e;
         setSuccess("Compte créé ! Vérifiez votre e-mail pour confirmer.");
       } else {
