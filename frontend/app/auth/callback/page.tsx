@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase";
  * Appelée après confirmation e-mail ou magic link.
  * URL : /auth/callback?token_hash=xxx&type=email
  *        ou /auth/callback?code=xxx  (PKCE flow)
+ *
+ * useSearchParams() doit être dans un Suspense boundary (Next.js 14).
  */
-export default function AuthCallbackPage() {
+function CallbackHandler() {
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const router = useRouter();
@@ -24,18 +26,15 @@ export default function AuthCallbackPage() {
 
       try {
         if (tokenHash && type) {
-          // Flow classique confirmation e-mail
           const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
           if (error) throw error;
         } else if (code) {
-          // Flow PKCE (OAuth ou magic link avec code)
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         } else {
           throw new Error("Lien de confirmation invalide ou expiré.");
         }
 
-        // Auth réussie — redirige selon si le profil existe
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
@@ -46,9 +45,10 @@ export default function AuthCallbackPage() {
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Erreur de confirmation.";
-        setErrorMsg(msg.includes("expired") || msg.includes("invalid")
-          ? "Ce lien est expiré ou déjà utilisé. Reconnectez-vous pour en recevoir un nouveau."
-          : msg
+        setErrorMsg(
+          msg.includes("expired") || msg.includes("invalid")
+            ? "Ce lien est expiré ou déjà utilisé. Reconnectez-vous pour en recevoir un nouveau."
+            : msg
         );
         setStatus("error");
       }
@@ -80,5 +80,18 @@ export default function AuthCallbackPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 text-sm">Chargement…</p>
+      </div>
+    }>
+      <CallbackHandler />
+    </Suspense>
   );
 }
