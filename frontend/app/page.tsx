@@ -12,7 +12,7 @@ export default function Home() {
       if (session) {
         router.replace("/dashboard");
       } else {
-        router.replace("/onboarding");
+        router.replace("/auth");
       }
     });
   }, [router]);
