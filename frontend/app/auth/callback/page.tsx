@@ -3,14 +3,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-/**
- * Page de callback Supabase Auth.
- * Appelée après confirmation e-mail ou magic link.
- * URL : /auth/callback?token_hash=xxx&type=email
- *        ou /auth/callback?code=xxx  (PKCE flow)
- *
- * useSearchParams() doit être dans un Suspense boundary (Next.js 14).
- */
 function CallbackHandler() {
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
@@ -20,33 +12,57 @@ function CallbackHandler() {
   useEffect(() => {
     const handle = async () => {
       const supabase = createClient();
+
+      // Supabase peut renvoyer une erreur explicite dans l'URL
+      const errorParam = searchParams.get("error");
+      const errorDesc  = searchParams.get("error_description");
+      if (errorParam) {
+        setErrorMsg(errorDesc ?? errorParam);
+        setStatus("error");
+        return;
+      }
+
       const tokenHash = searchParams.get("token_hash");
-      const type      = searchParams.get("type") as "email" | "signup" | "recovery" | null;
+      const type      = searchParams.get("type");
       const code      = searchParams.get("code");
 
       try {
-        if (tokenHash && type) {
-          const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-          if (error) throw error;
-        } else if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        } else {
-          throw new Error("Lien de confirmation invalide ou expiré.");
+        // Cas fréquent : Supabase a déjà vérifié le token côté serveur
+        // et a redirigé ici avec la session déjà établie dans les cookies.
+        // On vérifie d'abord si une session existe avant de retenter la vérification.
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          // Pas encore de session — on établit nous-mêmes
+          if (code) {
+            // PKCE flow
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) throw error;
+          } else if (tokenHash && type) {
+            // OTP token_hash flow
+            const { error } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: type as "email" | "signup" | "recovery" | "invite" | "magiclink" | "email_change",
+            });
+            if (error) throw error;
+          } else {
+            throw new Error("Lien de confirmation invalide ou expiré.");
+          }
         }
 
+        // Session établie (existante ou nouvellement créée)
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from("profiles").select("id").eq("id", user.id).single();
-          router.replace(profile ? "/dashboard" : "/onboarding");
-        } else {
-          router.replace("/auth");
-        }
+        if (!user) throw new Error("Session introuvable après confirmation.");
+
+        // Redirige selon si le profil existe
+        const { data: profile } = await supabase
+          .from("profiles").select("id").eq("id", user.id).maybeSingle();
+        router.replace(profile ? "/dashboard" : "/onboarding");
+
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Erreur de confirmation.";
         setErrorMsg(
-          msg.includes("expired") || msg.includes("invalid")
+          msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid")
             ? "Ce lien est expiré ou déjà utilisé. Reconnectez-vous pour en recevoir un nouveau."
             : msg
         );
