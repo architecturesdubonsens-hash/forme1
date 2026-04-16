@@ -16,7 +16,7 @@ export default function RecoveryBadge({ userId }: Props) {
       .select("recovery_score")
       .eq("user_id", userId)
       .eq("date", today)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data?.recovery_score != null) setScore(data.recovery_score);
       });

@@ -217,7 +217,7 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après, au format :
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=8192,
+        max_tokens=16000,
         system=[
             {
                 "type": "text",
@@ -230,11 +230,17 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après, au format :
 
     raw = response.content[0].text.strip()
 
-    # Extraction robuste du JSON (Claude peut parfois ajouter des backticks)
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
+    # Extraction robuste du JSON (ignore les backticks markdown autour)
+    if "```" in raw:
+        # Extrait le contenu entre les premiers ``` et les derniers ```
+        parts = raw.split("```")
+        for part in parts:
+            candidate = part.strip()
+            if candidate.startswith("json"):
+                candidate = candidate[4:].strip()
+            if candidate.startswith("{"):
+                raw = candidate
+                break
 
     data = json.loads(raw)
     sessions = [GeneratedSession(**{**s, "day_of_week": s["day_of_week"] % 7}) for s in data["sessions"]]
