@@ -27,19 +27,20 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    let currentUserId: string | null = null;
+
     const init = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/onboarding"); return; }
 
+      currentUserId = user.id;
       setUserId(user.id);
 
-      // Récupère le prénom
       const { data: profile } = await supabase
         .from("profiles").select("first_name").eq("id", user.id).single();
       if (profile?.first_name) setUserName(profile.first_name);
 
-      // Récupère le programme en cours + snacks recommandés en parallèle
       const [progResult, snackResult] = await Promise.allSettled([
         getCurrentProgram(user.id),
         recommendedSnacks(user.id),
@@ -48,7 +49,21 @@ export default function Dashboard() {
       if (snackResult.status === "fulfilled") setSnacks(snackResult.value as SnackActivity[]);
       setLoading(false);
     };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && currentUserId) {
+        getCurrentProgram(currentUserId).then((prog) => {
+          if (prog) {
+            setProgram(prog);
+            setGenerating(false);
+          }
+        }).catch(() => {});
+      }
+    };
+
     init();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [router]);
 
   const getMondayOfWeek = () => {
