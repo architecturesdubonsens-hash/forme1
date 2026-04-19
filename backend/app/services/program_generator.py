@@ -48,11 +48,18 @@ fondées sur la littérature scientifique récente dans les domaines suivants :
   en 8 semaines (Wisløff et al., Gjøvaag — études HUNT).
 - La Zone 2 (60–70% FCmax) améliore la biogenèse mitochondriale.
 
-### Mobilité fonctionnelle
+### Mobilité fonctionnelle & proprioception
 - La mobilité active (FRC — Functional Range Conditioning) est supérieure aux
   étirements passifs pour les gains durables.
 - CARs (Controlled Articular Rotations) quotidiens : 5–10 min suffisent.
 - La mobilité doit être travaillée dans les amplitudes d'utilisation réelle.
+- La proprioception décline significativement après 50 ans → premier facteur de
+  chutes et de blessures sportives (Lord et al., 2007).
+- Exercices clés : stance unipodal yeux fermés, plateau d'équilibre (BOSU),
+  Single-Leg RDL, marche en tandem, exercices de stabilisation en instabilité.
+- Intégrer la proprioception dans les exercices de force maximise le transfert
+  fonctionnel (ex : squat sur surface instable, curl sur une jambe).
+- Progressions : surface stable → instable → yeux fermés → tâche duale.
 
 ### Récupération & surmenage
 - HRV (variabilité de la fréquence cardiaque) : marqueur fiable de l'état
@@ -114,7 +121,7 @@ def _build_user_context(profile: dict, wearable_recent: list[dict], week_schedul
         f"## Objectifs pondérés",
         f"- Perte de graisse viscérale : {profile.get('goal_fat_loss', 25)}%",
         f"- Masse musculaire (anti-sarcopénie) : {profile.get('goal_muscle', 25)}%",
-        f"- Mobilité fonctionnelle : {profile.get('goal_mobility', 25)}%",
+        f"- Mobilité & proprioception : {profile.get('goal_mobility', 25)}%",
         f"- VO2max : {profile.get('goal_vo2max', 25)}%",
     ]
 
@@ -178,7 +185,7 @@ Chaque séance doit :
 - Comporter 3 blocs : échauffement, travail principal, retour au calme
 - Inclure pour chaque exercice : sets, reps/durée, RPE cible, note de charge (max 6 mots), 2 cues max (max 5 mots chacun), demo_url : URL de recherche YouTube du mouvement (ex: "https://www.youtube.com/results?search_query=squat+technique+form")
 - Avoir un champ "strategic_context" : 1 phrase courte (max 15 mots)
-- Avoir un champ "objectives_targeted" (liste parmi : fat_loss, muscle, vo2max, mobility)
+- Avoir un champ "objectives_targeted" (liste parmi : fat_loss, muscle, vo2max, mobility, proprioception)
 
 Respecte la répartition des objectifs pondérés pour l'ensemble de la semaine.
 

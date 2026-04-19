@@ -8,7 +8,7 @@ type GoalKey = "goal_fat_loss" | "goal_muscle" | "goal_mobility" | "goal_vo2max"
 const GOALS: { key: GoalKey; label: string; desc: string; color: string }[] = [
   { key: "goal_fat_loss", label: "Perte de graisse viscérale", desc: "Réduire la graisse abdominale profonde", color: "bg-orange-500" },
   { key: "goal_muscle",   label: "Masse musculaire",          desc: "Lutter contre la sarcopénie, se tonifier",  color: "bg-blue-500" },
-  { key: "goal_mobility", label: "Mobilité & mouvement",      desc: "Amplitude articulaire, fluidité",           color: "bg-purple-500" },
+  { key: "goal_mobility", label: "Mobilité & proprioception",  desc: "Équilibre, coordination, amplitude articulaire", color: "bg-purple-500" },
   { key: "goal_vo2max",   label: "Endurance (VO2max)",        desc: "Capacité cardio-respiratoire",              color: "bg-brand-500" },
 ];
 

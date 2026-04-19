@@ -6,7 +6,7 @@ Application de coaching physique intelligente, scientifiquement fondée, conçue
 
 1. **Réduction de la graisse viscérale** — via des protocoles cardio et métaboliques ciblés
 2. **Lutte contre la sarcopénie / développement musculaire** — résistance progressive, volume et fréquence adaptés à l'âge
-3. **Mobilité fonctionnelle** — amplitude articulaire, stabilité, prévention des compensations
+3. **Mobilité fonctionnelle & proprioception** — amplitude articulaire, équilibre, coordination, prévention des chutes et compensations
 4. **Amélioration du VO2max** — travail aérobie structuré (HIIT, MICT, Zone 2)
 
 L'application doit s'améliorer avec l'utilisateur : plus il fournit de données (feedback, données wearable), plus le programme devient précis et efficace.
