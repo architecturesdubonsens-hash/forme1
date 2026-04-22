@@ -183,7 +183,11 @@ Chaque séance doit :
 - Durer environ {duration} minutes
 - Être adaptée à l'équipement et au niveau de l'utilisateur
 - Comporter 3 blocs : échauffement, travail principal, retour au calme
-- Inclure pour chaque exercice : sets, reps/durée, RPE cible, note de charge (max 6 mots), 2 cues max (max 5 mots chacun), demo_url : URL de recherche YouTube du mouvement (ex: "https://www.youtube.com/results?search_query=squat+technique+form")
+- Inclure pour chaque exercice : sets, reps/durée, RPE cible, 2 cues max (max 5 mots chacun), demo_url : URL de recherche YouTube du mouvement (ex: "https://www.youtube.com/results?search_query=squat+technique+form")
+- Le champ "load_notes" doit être une phrase courte et précise qui indique :
+  (1) si le poids est "par haltère" ou "total barre" ou "poids de corps",
+  (2) si l'exercice est unilatéral : précise "chaque côté" ou "côté droit puis gauche"
+  Exemples : "12 kg par haltère, chaque côté" / "60 kg barre totale" / "poids de corps, jambe droite puis gauche"
 - Avoir un champ "strategic_context" : 1 phrase courte (max 15 mots)
 - Avoir un champ "objectives_targeted" (liste parmi : fat_loss, muscle, vo2max, mobility, proprioception)
 

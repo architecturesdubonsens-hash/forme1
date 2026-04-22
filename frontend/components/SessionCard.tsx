@@ -267,7 +267,7 @@ function ExerciseRow({ ex }: { ex: Exercise }) {
             )}
           </div>
           {prescription && <p className="text-xs text-slate-400 mt-0.5">{prescription}</p>}
-          {ex.load_notes && <p className="text-xs text-slate-500 italic">{ex.load_notes}</p>}
+          {ex.load_notes && <p className="text-xs text-slate-300 mt-0.5">{ex.load_notes}</p>}
           {showCues && ex.cues && (
             <ul className="mt-1.5 space-y-0.5">
               {ex.cues.map((cue, i) => (
