@@ -9,6 +9,7 @@ import StepHistorique from "./steps/StepHistorique";
 import StepDisponibilite from "./steps/StepDisponibilite";
 import StepEquipement from "./steps/StepEquipement";
 import StepSante from "./steps/StepSante";
+import StepContexte from "./steps/StepContexte";
 
 export type ProfileDraft = {
   first_name: string;
@@ -29,6 +30,8 @@ export type ProfileDraft = {
   sport_history: string[];
   preferred_activities: string[];
   specific_goal: string;
+  existing_training: boolean;
+  existing_training_context: string;
 };
 
 const INITIAL: ProfileDraft = {
@@ -50,12 +53,15 @@ const INITIAL: ProfileDraft = {
   sport_history: [],
   preferred_activities: [],
   specific_goal: "",
+  existing_training: false,
+  existing_training_context: "",
 };
 
 const STEPS = [
   { label: "Identité",            component: StepIdentite },
   { label: "Objectifs",           component: StepObjectifs },
   { label: "Historique",          component: StepHistorique },
+  { label: "Contexte",            component: StepContexte },
   { label: "Disponibilité",       component: StepDisponibilite },
   { label: "Équipement",          component: StepEquipement },
   { label: "Santé",               component: StepSante },

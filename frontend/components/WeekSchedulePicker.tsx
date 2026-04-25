@@ -21,9 +21,17 @@ const DAY_TYPES: { value: DayType; icon: string; label: string; desc: string }[]
 
 const DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
+const CHECKIN_CHIPS = [
+  { id: "same",       label: "Objectifs identiques" },
+  { id: "objectives", label: "Objectifs mis à jour" },
+  { id: "activities", label: "Nouvelles activités" },
+  { id: "injury",     label: "Blessure / contrainte" },
+];
+
 type Props = {
   weekStart: Date;
-  onConfirm: (schedule: DaySchedule[]) => void;
+  showCheckin?: boolean;
+  onConfirm: (schedule: DaySchedule[], weekContext: string) => void;
   onCancel: () => void;
 };
 
@@ -42,8 +50,33 @@ function buildInitialSchedule(weekStart: Date): DaySchedule[] {
   });
 }
 
-export default function WeekSchedulePicker({ weekStart, onConfirm, onCancel }: Props) {
+export default function WeekSchedulePicker({ weekStart, showCheckin, onConfirm, onCancel }: Props) {
+  const [step, setStep] = useState<"checkin" | "schedule">(showCheckin ? "checkin" : "schedule");
+  const [checkedChips, setCheckedChips] = useState<Set<string>>(new Set(["same"]));
+  const [checkinNote, setCheckinNote] = useState("");
   const [schedule, setSchedule] = useState<DaySchedule[]>(buildInitialSchedule(weekStart));
+
+  const toggleChip = (id: string) => {
+    setCheckedChips((prev) => {
+      const next = new Set(prev);
+      if (id === "same") {
+        return new Set(["same"]);
+      }
+      next.delete("same");
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      if (next.size === 0) next.add("same");
+      return next;
+    });
+  };
+
+  const buildWeekContext = () => {
+    const chips = CHECKIN_CHIPS.filter((c) => checkedChips.has(c.id) && c.id !== "same").map((c) => c.label);
+    const parts = [];
+    if (chips.length > 0) parts.push(`Changements signalés : ${chips.join(", ")}.`);
+    if (checkinNote.trim()) parts.push(checkinNote.trim());
+    return parts.join(" ");
+  };
 
   const cycleType = (dayIndex: number) => {
     setSchedule((prev) =>
@@ -76,6 +109,61 @@ export default function WeekSchedulePicker({ weekStart, onConfirm, onCancel }: P
         className="w-full max-w-lg bg-surface-card rounded-2xl p-5 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Étape 0 : check-in hebdomadaire */}
+        {step === "checkin" && (
+          <>
+            <div>
+              <h2 className="text-lg font-bold text-white">Bilan de la semaine</h2>
+              <p className="text-slate-400 text-sm mt-0.5">
+                Des évolutions depuis la dernière génération ?
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {CHECKIN_CHIPS.map((chip) => (
+                <button
+                  key={chip.id}
+                  onClick={() => toggleChip(chip.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition border ${
+                    checkedChips.has(chip.id)
+                      ? "bg-brand-500/20 border-brand-500 text-brand-300"
+                      : "bg-surface-muted border-surface-muted text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+
+            {!checkedChips.has("same") && (
+              <textarea
+                value={checkinNote}
+                onChange={(e) => setCheckinNote(e.target.value)}
+                placeholder="Précisez si besoin (ex : reprise du tennis, douleur genou gauche…)"
+                className="w-full bg-surface-muted border border-surface-muted rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 resize-none"
+                rows={3}
+              />
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={onCancel}
+                className="flex-1 py-3 rounded-xl border border-surface-muted text-slate-300 text-sm font-medium hover:bg-surface transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => setStep("schedule")}
+                className="flex-1 py-3 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 transition"
+              >
+                Suivant →
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Étape 1 : planning de semaine */}
+        {step === "schedule" && (<>
         <div>
           <h2 className="text-lg font-bold text-white">Votre semaine</h2>
           <p className="text-slate-400 text-sm mt-0.5">
@@ -143,12 +231,13 @@ export default function WeekSchedulePicker({ weekStart, onConfirm, onCancel }: P
             Annuler
           </button>
           <button
-            onClick={() => onConfirm(schedule)}
+            onClick={() => onConfirm(schedule, buildWeekContext())}
             className="flex-1 py-3 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 transition"
           >
             Générer mon programme
           </button>
         </div>
+        </>)}
       </motion.div>
     </motion.div>
   );

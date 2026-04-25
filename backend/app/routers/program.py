@@ -77,6 +77,7 @@ async def generate_program(
         week_number=req.week_number,
         week_start=req.week_start,
         week_schedule=[d.model_dump() for d in req.week_schedule],
+        week_context=req.week_context,
     )
 
     # Calcul de la fin de semaine

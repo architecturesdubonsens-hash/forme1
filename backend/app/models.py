@@ -30,6 +30,8 @@ class ProfileCreate(BaseModel):
     sport_history: list[str] = []
     preferred_activities: list[str] = []
     specific_goal: Optional[str] = None
+    existing_training: bool = False
+    existing_training_context: Optional[str] = None
 
 class ProfileRead(ProfileCreate):
     id: UUID
@@ -96,6 +98,7 @@ class ProgramGenerationRequest(BaseModel):
     week_number: int = 1
     week_start: date
     week_schedule: list[DaySchedule] = []
+    week_context: Optional[str] = None
 
 class GeneratedSession(BaseModel):
     """Une séance dans le programme généré par Claude."""

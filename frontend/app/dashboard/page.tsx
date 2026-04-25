@@ -81,7 +81,7 @@ export default function Dashboard() {
   };
 
   // Appelé quand l'utilisateur confirme le planning
-  const handleGenerate = async (schedule: DaySchedule[]) => {
+  const handleGenerate = async (schedule: DaySchedule[], weekContext: string) => {
     if (!userId) return;
     setShowSchedulePicker(false);
     setGenerating(true);
@@ -91,7 +91,7 @@ export default function Dashboard() {
       const weekNumber = Math.ceil(
         (monday.getTime() - new Date(monday.getFullYear(), 0, 1).getTime()) / 604800000
       );
-      const result = await generateProgram(userId, weekNumber, weekStart, schedule);
+      const result = await generateProgram(userId, weekNumber, weekStart, schedule, weekContext);
       setProgram(result);
     } catch (e) {
       console.error(e);
@@ -228,6 +228,7 @@ export default function Dashboard() {
       {showSchedulePicker && pendingWeekStart && (
         <WeekSchedulePicker
           weekStart={pendingWeekStart}
+          showCheckin={!!program}
           onConfirm={handleGenerate}
           onCancel={() => setShowSchedulePicker(false)}
         />

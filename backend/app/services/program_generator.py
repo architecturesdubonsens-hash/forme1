@@ -134,6 +134,15 @@ def _build_user_context(profile: dict, wearable_recent: list[dict], week_schedul
             lines.append(f"- {day_label} ({d.get('date', '')}) : {desc}")
         lines.append("→ Place les séances intenses sur les jours libres. Sur les jours voyage/hôtel, propose uniquement du snack fitness ou poids de corps.")
 
+    if profile.get("existing_training"):
+        lines += [
+            "",
+            "## Pratique existante (ce programme est un COMPLÉMENT)",
+            f"- {profile.get('existing_training_context') or 'Pratique non précisée'}",
+            "→ Ne pas surcharger les mêmes groupes musculaires/systèmes énergétiques que l'activité existante.",
+            "→ Privilégier les zones non travaillées et la récupération active.",
+        ]
+
     if profile.get("sport_history"):
         lines.append(f"- Sports pratiqués par le passé : {', '.join(profile['sport_history'])}")
     if profile.get("preferred_activities"):
@@ -162,6 +171,7 @@ async def generate_weekly_program(
     week_number: int,
     week_start: date,
     week_schedule: list[dict] | None = None,
+    week_context: str | None = None,
 ) -> list[GeneratedSession]:
     """
     Génère un programme hebdomadaire complet via Claude.
@@ -171,9 +181,13 @@ async def generate_weekly_program(
     sessions_count = profile.get("sessions_per_week", 4)
     duration = profile.get("session_duration_min", 60)
 
+    week_context_block = ""
+    if week_context and week_context.strip():
+        week_context_block = f"\n## Évolutions signalées cette semaine\n{week_context.strip()}\n→ Adapte le programme en tenant compte de ces évolutions.\n"
+
     user_prompt = f"""
 {user_context}
-
+{week_context_block}
 ## Ta tâche
 
 Génère exactement {sessions_count} séances d'entraînement pour la semaine {week_number}

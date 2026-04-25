@@ -45,7 +45,11 @@ CREATE TABLE profiles (
 
   -- Santé
   medical_notes   TEXT,
-  injury_history  TEXT[]
+  injury_history  TEXT[],
+
+  -- Contexte d'entraînement
+  existing_training          BOOLEAN DEFAULT false,
+  existing_training_context  TEXT
 );
 
 -- Mise à jour automatique du updated_at
