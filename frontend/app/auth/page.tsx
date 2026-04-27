@@ -35,12 +35,11 @@ export default function AuthPage() {
         const { error: e } = await supabase.auth.signInWithPassword({ email, password });
         if (e) throw e;
 
-        // Vérifier si le profil existe
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
-            .from("profiles").select("id").eq("id", user.id).single();
-          router.push(profile ? "/dashboard" : "/onboarding");
+            .from("profiles").select("id").eq("id", user.id).maybeSingle();
+          router.replace(profile ? "/dashboard" : "/onboarding");
         }
       }
     } catch (e: unknown) {
