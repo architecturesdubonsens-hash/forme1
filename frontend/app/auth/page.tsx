@@ -32,10 +32,10 @@ export default function AuthPage() {
         if (e) throw e;
         setSuccess("Compte créé ! Vérifiez votre e-mail pour confirmer.");
       } else {
-        const { error: e } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error: e } = await supabase.auth.signInWithPassword({ email, password });
         if (e) throw e;
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = data.user;
         if (user) {
           const { data: profile } = await supabase
             .from("profiles").select("id").eq("id", user.id).maybeSingle();
