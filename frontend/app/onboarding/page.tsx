@@ -86,8 +86,15 @@ export default function OnboardingPage() {
     try {
       const supabase = createClient();
 
-      // Utilise l'utilisateur connecté si disponible, sinon session anonyme
-      let { data: { user } } = await supabase.auth.getUser();
+      // Tente d'abord de récupérer la session depuis le stockage local
+      let { data: { session } } = await supabase.auth.getSession();
+      // Si pas de session locale, tente de rafraîchir (couvre le cas Android
+      // où la confirmation email s'est faite dans un autre navigateur)
+      if (!session) {
+        const refreshed = await supabase.auth.refreshSession();
+        session = refreshed.data.session;
+      }
+      let user = session?.user ?? null;
       if (!user) {
         const { data, error: authErr } = await supabase.auth.signInAnonymously();
         if (authErr || !data.user) throw new Error("Connexion impossible.");
