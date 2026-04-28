@@ -11,6 +11,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const router = useRouter();
@@ -100,12 +101,22 @@ export default function AuthPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Mot de passe</label>
-              <input
-                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handle()}
-                placeholder="••••••••"
-                className="w-full bg-surface border border-surface-muted rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handle()}
+                  placeholder="••••••••"
+                  className="w-full bg-surface border border-surface-muted rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition text-sm px-1"
+                >
+                  {showPassword ? "Masquer" : "Afficher"}
+                </button>
+              </div>
             </div>
 
             {error   && <p className="text-red-400 text-sm text-center">{error}</p>}
