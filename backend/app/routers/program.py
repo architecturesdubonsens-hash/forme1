@@ -70,6 +70,18 @@ async def generate_program(
     )
     wearable_data = wearable_res.data or []
 
+    # Récupération des alertes santé actives
+    alerts_res = (
+        supabase.table("health_alerts")
+        .select("type, body_zone, severity, exercise_name, notes")
+        .eq("user_id", user_id)
+        .eq("resolved", False)
+        .order("created_at", desc=True)
+        .limit(10)
+        .execute()
+    )
+    health_alerts = alerts_res.data or []
+
     # Génération via Claude
     sessions, generation_notes = await generate_weekly_program(
         profile=profile,
@@ -78,6 +90,7 @@ async def generate_program(
         week_start=req.week_start,
         week_schedule=[d.model_dump() for d in req.week_schedule],
         week_context=req.week_context,
+        health_alerts=health_alerts,
     )
 
     # Calcul de la fin de semaine

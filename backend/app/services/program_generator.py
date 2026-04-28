@@ -172,6 +172,7 @@ async def generate_weekly_program(
     week_start: date,
     week_schedule: list[dict] | None = None,
     week_context: str | None = None,
+    health_alerts: list[dict] | None = None,
 ) -> list[GeneratedSession]:
     """
     Génère un programme hebdomadaire complet via Claude.
@@ -185,9 +186,23 @@ async def generate_weekly_program(
     if week_context and week_context.strip():
         week_context_block = f"\n## Évolutions signalées cette semaine\n{week_context.strip()}\n→ Adapte le programme en tenant compte de ces évolutions.\n"
 
+    alerts_block = ""
+    if health_alerts:
+        TYPE_FR = {"pain": "Douleur aiguë", "discomfort": "Gêne passagère", "injury": "Blessure", "fatigue": "Fatigue excessive"}
+        lines = ["## Gênes / blessures actives (NE PAS solliciter ces zones)"]
+        for a in health_alerts:
+            parts = [TYPE_FR.get(a.get("type", ""), a.get("type", ""))]
+            if a.get("body_zone"):    parts.append(f"zone : {a['body_zone']}")
+            if a.get("exercise_name"): parts.append(f"exercice : {a['exercise_name']}")
+            if a.get("severity"):     parts.append(f"intensité {a['severity']}/5")
+            if a.get("notes"):        parts.append(a["notes"])
+            lines.append(f"- {' | '.join(parts)}")
+        lines.append("→ Proposer des alternatives sans sollicitation de ces zones. Signaler dans generation_notes.")
+        alerts_block = "\n" + "\n".join(lines) + "\n"
+
     user_prompt = f"""
 {user_context}
-{week_context_block}
+{week_context_block}{alerts_block}
 ## Ta tâche
 
 Génère exactement {sessions_count} séances d'entraînement pour la semaine {week_number}

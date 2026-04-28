@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
 import { submitFeedback } from "@/lib/api";
+import HealthAlertModal from "@/components/HealthAlertModal";
 
 const TYPE_LABELS: Record<string, string> = {
   strength:"Force", cardio:"Cardio", hiit:"HIIT",
@@ -31,6 +32,7 @@ export default function SessionDetailPage() {
   const [pain, setPain]           = useState(false);
   const [notes, setNotes]         = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [alertExercise, setAlertExercise] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -158,7 +160,7 @@ export default function SessionDetailPage() {
               </div>
               <div className="space-y-2">
                 {blockExs.map((ex, i) => (
-                  <ExerciseDetail key={ex.id ?? i} ex={ex} index={i + 1} />
+                  <ExerciseDetail key={ex.id ?? i} ex={ex} index={i + 1} onAlert={setAlertExercise} />
                 ))}
               </div>
             </div>
@@ -234,10 +236,22 @@ export default function SessionDetailPage() {
         )}
       </div>
     </div>
+
+      <AnimatePresence>
+        {alertExercise !== null && userId && (
+          <HealthAlertModal
+            userId={userId}
+            exerciseName={alertExercise}
+            onClose={() => setAlertExercise(null)}
+            onSaved={() => setAlertExercise(null)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
-function ExerciseDetail({ ex, index }: { ex: any; index: number }) {
+function ExerciseDetail({ ex, index, onAlert }: { ex: any; index: number; onAlert: (name: string) => void }) {
   const [open, setOpen] = useState(index === 1);
 
   const prescription = [
@@ -262,6 +276,13 @@ function ExerciseDetail({ ex, index }: { ex: any; index: number }) {
           className="text-xs text-brand-400 hover:text-brand-300 shrink-0 px-2 py-1 bg-brand-500/10 rounded-lg">
           ▶ Démo
         </a>}
+        <button
+          onClick={(e) => { e.stopPropagation(); onAlert(ex.name_fr ?? ""); }}
+          className="text-xs text-orange-400 hover:text-orange-300 shrink-0 px-2 py-1 bg-orange-500/10 rounded-lg"
+          title="Signaler une gêne sur cet exercice"
+        >
+          ⚠
+        </button>
         <span className="text-slate-500 text-xs">{open ? "▲" : "▼"}</span>
       </button>
 

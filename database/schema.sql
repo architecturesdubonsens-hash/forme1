@@ -262,7 +262,32 @@ CREATE TABLE session_feedback (
 
 
 -- ============================================================
--- 9. JOURNAL DES ADAPTATIONS IA (audit trail)
+-- 9. ALERTES SANTÉ (douleurs, gênes, blessures)
+-- ============================================================
+
+CREATE TABLE health_alerts (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ DEFAULT now(),
+
+  type        TEXT NOT NULL CHECK (type IN ('pain', 'discomfort', 'injury', 'fatigue')),
+  body_zone   TEXT,
+  severity    INT CHECK (severity BETWEEN 1 AND 5),
+  exercise_name TEXT,
+  notes       TEXT,
+
+  resolved    BOOLEAN DEFAULT false,
+  resolved_at TIMESTAMPTZ
+);
+
+ALTER TABLE health_alerts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_data" ON health_alerts
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+
+-- ============================================================
+-- 10. JOURNAL DES ADAPTATIONS IA (audit trail)
 -- ============================================================
 
 CREATE TABLE adaptation_logs (
