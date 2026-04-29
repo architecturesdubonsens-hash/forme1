@@ -37,9 +37,10 @@ export default function Dashboard() {
       currentUserId = user.id;
       setUserId(user.id);
 
-      const { data: profile } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles").select("first_name").eq("id", user.id).maybeSingle();
-      if (profile?.first_name) setUserName((profile as { first_name: string }).first_name);
+      const firstName = (profileData as any)?.first_name;
+      if (firstName) setUserName(firstName);
 
       const [progResult, snackResult] = await Promise.allSettled([
         getCurrentProgram(user.id),

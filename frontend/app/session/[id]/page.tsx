@@ -235,7 +235,6 @@ export default function SessionDetailPage() {
           </motion.div>
         )}
       </div>
-    </div>
 
       <AnimatePresence>
         {alertExercise !== null && userId && (
