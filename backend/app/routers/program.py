@@ -155,14 +155,15 @@ async def generate_program(
                 "load_notes": ex.load_notes,
             }).execute()
 
-    return {
-        "plan_id": plan_id,
-        "week_start": req.week_start,
-        "week_end": week_end,
-        "sessions_count": len(sessions),
-        "generation_notes": generation_notes,
-        "sessions": [s.model_dump() for s in sessions],
-    }
+    # Retourner le même format que /current (avec les IDs de session)
+    plan_res = (
+        supabase.table("weekly_plans")
+        .select("*, sessions(*, session_exercises(*))")
+        .eq("id", plan_id)
+        .single()
+        .execute()
+    )
+    return plan_res.data
 
 
 @router.get("/current")
