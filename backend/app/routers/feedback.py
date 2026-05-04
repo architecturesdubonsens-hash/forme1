@@ -7,6 +7,7 @@ from fastapi import APIRouter, Header, HTTPException
 
 from app.database import supabase
 from app.models import FeedbackCreate
+from app.services.progress_service import compute_and_save_progress
 
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
@@ -55,5 +56,11 @@ async def submit_feedback(
         "status": new_status,
         "completed_at": "now()",
     }).eq("id", str(session_id)).execute()
+
+    # Recalcul de la progression (non bloquant : on ignore les erreurs)
+    try:
+        compute_and_save_progress(user_id)
+    except Exception:
+        pass
 
     return {"status": "ok", "session_status": new_status}
