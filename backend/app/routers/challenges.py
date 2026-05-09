@@ -58,7 +58,7 @@ async def suggest(x_user_id: UUID = Header(...)):
         raise HTTPException(404, "Profil introuvable.")
 
     # Semaine courante
-    plan_res = supabase.table("weekly_plans").select("week_number").eq("user_id", str(x_user_id)).eq("is_active", True).single().execute()
+    plan_res = supabase.table("weekly_plans").select("week_number").eq("user_id", str(x_user_id)).eq("is_active", True).maybe_single().execute()
     current_week = plan_res.data["week_number"] if plan_res.data else 1
 
     suggestions = await suggest_challenges(profile_res.data, current_week)
