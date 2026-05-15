@@ -1,63 +1,125 @@
-import datetime
+"""
+Génération de défis personnalisés via Claude API.
+Expose deux fonctions utilisées par le router challenges :
+  - suggest_challenges(profile, current_week) -> list[dict]
+  - generate_challenge_custom(profile, challenge_type, hint, duration_weeks) -> dict
+"""
+import json
+import re
 
-# Note: Assurez-vous que les imports nécessaires (comme de la librairie 'anthropic' ou 'openai' 
-# si vous utilisez un client spécifique) sont présents en haut de votre fichier principal.
+import anthropic
 
-class ChallengeService:
+from app.config import settings
+
+client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+_SYSTEM = (
+    "Tu es un coach sportif expert, spécialisé dans la préparation physique des adultes "
+    "de 45 ans et plus. Tu génères des défis stimulants, sécurisés et progressifs, "
+    "fondés sur la littérature scientifique (sarcopénie, VO2max, graisse viscérale, mobilité). "
+    "Tu réponds UNIQUEMENT en JSON valide, sans texte autour."
+)
+
+
+def _parse_json(text: str):
+    """Extrait le premier objet/tableau JSON d'une réponse Claude."""
+    # Enlever les blocs markdown éventuels
+    text = re.sub(r"```(?:json)?", "", text).strip()
+    return json.loads(text)
+
+
+async def suggest_challenges(profile: dict, current_week: int) -> list[dict]:
     """
-    Service gérant la génération de défis sportifs via l'IA.
+    Génère 3 suggestions de défis adaptées au profil et à la semaine en cours.
+    Retourne une liste de dicts prêts à être affichés et éventuellement persistés.
     """
+    prompt = f"""
+Génère exactement 3 défis sportifs personnalisés pour ce profil :
 
-    def __init__(self, anthropic_client):
-        self.client = anthropic_client
+Profil :
+- Âge : {profile.get("age", "inconnu")} ans
+- Poids : {profile.get("weight_kg", "inconnu")} kg
+- Niveau de forme : {profile.get("fitness_level", "intermédiaire")}
+- Équipement : {profile.get("equipment", "aucun équipement spécifique")}
+- Objectifs prioritaires : {profile.get("objectives", "santé générale")}
+- Contraintes médicales : {profile.get("medical_constraints", "aucune")}
+- Semaine de programme en cours : {current_week}
 
-    async def generate_challenges(self, user_profile: dict) -> list:
-        """
-        Méthode principale pour générer des défis basés sur le profil utilisateur.
-        """
-        # Construction du prompt système (Le "Cerveau" de l'IA)
-        system_prompt = (
-            "Tu es un coach sportif expert, spécialisé dans la préparation physique et la motivation. "
-        "Ton objectif est de créer des défis stimulants, sécurisés et personnalisés.\n\n"
-        "CONSIGNES :\n"
-        "1. Adapte l'intensité au niveau de l'utilisateur (débutant, intermédiaire, expert).\n"
-        "2. Utilise un ton motivant mais professionnel.\n"
-        "3. Chaque défi doit être réalisable avec un équipement minimal ou sans matériel.\n"
-        "4. Structure tes réponses de manière très précise en JSON.\n\n"
-        "FORMAT DE SORTIE (JSON uniquement) :\n"
-        "[\n"
-        "  {\n"
-        "    \"title\": \"Nom du défi\",\n"
-        "    \"description\": \"Description détaillée de l'exercice\",\n"
-        "    \"duration_minutes\": 20,\n"
-        "    \"difficulty\": \"easy|medium|hard\",\n"
-        "    \"instructions\": \"Étapes à suivre\"\n"
-        "  }\n"
-        "]"
-        )
+Réponds avec un tableau JSON de 3 objets, chacun contenant exactement ces champs :
+{{
+  "title": "Titre court et motivant",
+  "description": "Description en 2-3 phrases",
+  "emoji": "un emoji représentatif",
+  "challenge_type": "strength | cardio | hiit | mobility | mixed",
+  "target_description": "Objectif chiffré et mesurable",
+  "target_metrics": {{"unit": "...", "value": 0}},
+  "duration_weeks": 4,
+  "milestones": [
+    {{"week": 1, "label": "...", "done": false}},
+    {{"week": 2, "label": "...", "done": false}},
+    {{"week": 3, "label": "...", "done": false}},
+    {{"week": 4, "label": "...", "done": false}}
+  ],
+  "domains": ["strength"],
+  "generation_notes": "Justification scientifique en 1 phrase"
+}}
+"""
 
-        # Construction du prompt utilisateur (Les données)
-        user_prompt = f"""
-        Génère 3 nouveaux défis sportifs pour ce profil :
-        - Niveau : {user_profile.get('fitness_level', 'débutant')}
-        - Objectif : {user_profile.get('goal', 'santé générale')}
-        - Équipement disponible : {user_profile.get('equipment', 'aucun')}
-        - Préférences : {user_profile.get('preferences', 'aucun')}
-        """
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=2000,
+        system=_SYSTEM,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return _parse_json(response.content[0].text)
 
-        try:
-            # Appel à l'API (Exemple avec Anthropic Claude)
-            response = self.client.messages.create(
-                model="claude-3-5-sonnet-20240620",
-                max_tokens=1000,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}]
-            )
-            
-            # Extraction et parsing du contenu
-            content = response.content[0].text
-            import json
-            return json.loads(content)
-        except Exception as e:
-            print(f"Erreur lors de la génération des défis : {e}")
-            return []
+
+async def generate_challenge_custom(
+    profile: dict,
+    challenge_type: str,
+    hint: str,
+    duration_weeks: int = 8,
+) -> dict:
+    """
+    Génère un défi unique sur mesure à partir d'une indication libre.
+    Retourne un dict prêt à être persisté.
+    """
+    prompt = f"""
+Génère un défi sportif sur mesure pour ce profil :
+
+Profil :
+- Âge : {profile.get("age", "inconnu")} ans
+- Niveau de forme : {profile.get("fitness_level", "intermédiaire")}
+- Équipement : {profile.get("equipment", "aucun équipement spécifique")}
+- Objectifs : {profile.get("objectives", "santé générale")}
+
+Type de défi demandé : {challenge_type}
+Indication de l'utilisateur : "{hint}"
+Durée souhaitée : {duration_weeks} semaines
+
+Réponds avec un objet JSON unique contenant exactement ces champs :
+{{
+  "title": "Titre court et motivant",
+  "description": "Description en 2-3 phrases",
+  "emoji": "un emoji représentatif",
+  "challenge_type": "{challenge_type}",
+  "target_description": "Objectif chiffré et mesurable",
+  "target_metrics": {{"unit": "...", "value": 0}},
+  "duration_weeks": {duration_weeks},
+  "milestones": [
+    {{"week": 1, "label": "Jalon semaine 1", "done": false}}
+  ],
+  "domains": ["{challenge_type}"],
+  "generation_notes": "Justification et conseils de sécurité en 2 phrases"
+}}
+
+Les jalons doivent couvrir toutes les {duration_weeks} semaines de manière progressive.
+"""
+
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=1500,
+        system=_SYSTEM,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return _parse_json(response.content[0].text)
