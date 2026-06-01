@@ -360,44 +360,33 @@ function SetupTab({
     },
   ];
 
-  // Lien d'installation automatique (shortcuts:// ne fonctionne que sur iOS)
+  // URL directe du fichier .shortcut — Safari sur iPhone l'ouvre dans Raccourcis
   const shortcutDownloadUrl = userId
     ? `${backendUrl}/api/wearable/shortcut?user_id=${userId}&backend_url=${encodeURIComponent(backendUrl)}`
-    : null;
-  const shortcutImportUrl = shortcutDownloadUrl
-    ? `shortcuts://x-callback-url/import-workflow?url=${encodeURIComponent(shortcutDownloadUrl)}&name=Forme+1+Apple+Watch`
     : null;
 
   return (
     <div className="space-y-4">
 
-      {/* ── Bouton d'installation automatique ─────────────────────────────── */}
+      {/* ── Bouton d'installation ─────────────────────────────────────────── */}
       <div className="bg-brand-500/10 border border-brand-500/30 rounded-2xl p-5 text-center">
         <p className="text-2xl mb-2">⌚</p>
-        <h2 className="text-base font-bold text-white mb-1">Installation automatique</h2>
+        <h2 className="text-base font-bold text-white mb-1">Installer le Raccourci</h2>
         <p className="text-xs text-slate-400 mb-4">
-          Ouvre ce lien depuis <strong>Safari sur iPhone</strong>.
-          Le Raccourci s'importe avec ton UUID et l'URL déjà configurés.
+          Appuie sur le bouton depuis <strong>Safari sur iPhone</strong>.
+          iOS te propose automatiquement de l'ouvrir dans Raccourcis.
         </p>
-        {shortcutImportUrl ? (
+        {shortcutDownloadUrl ? (
           <a
-            href={shortcutImportUrl}
+            href={shortcutDownloadUrl}
             className="block w-full py-3 bg-brand-500 rounded-xl font-semibold text-white text-sm hover:bg-brand-600 transition"
           >
-            Installer le Raccourci →
+            Télécharger le Raccourci →
           </a>
         ) : (
           <div className="w-full py-3 bg-surface-muted rounded-xl text-slate-500 text-sm">
             Chargement…
           </div>
-        )}
-        {shortcutDownloadUrl && (
-          <a
-            href={shortcutDownloadUrl}
-            className="block mt-2 text-xs text-slate-500 hover:text-slate-300 transition"
-          >
-            Télécharger le fichier .shortcut
-          </a>
         )}
       </div>
 

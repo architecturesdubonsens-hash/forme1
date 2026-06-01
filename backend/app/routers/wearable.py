@@ -109,9 +109,10 @@ async def download_shortcut(
 
     return Response(
         content=data,
-        media_type="application/octet-stream",
+        media_type="application/x-apple-shortcuts",
         headers={
             "Content-Disposition": 'attachment; filename="Forme1-AppleWatch.shortcut"',
             "Cache-Control": "no-store",
+            "Access-Control-Allow-Origin": "*",
         },
     )
