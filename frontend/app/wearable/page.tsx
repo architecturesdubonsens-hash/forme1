@@ -337,152 +337,118 @@ function SetupTab({
   copied: boolean;
   onCopy: () => void;
 }) {
-  const steps = [
+  const actions = [
     {
       num: 1,
-      title: "Ouvrir l'app Raccourcis",
-      desc: "Sur votre iPhone, ouvrez l'app Raccourcis et créez un nouveau raccourci.",
+      emoji: "📱",
+      title: "Ouvrir Raccourcis → + → Nouveau raccourci",
+      detail: null,
     },
     {
       num: 2,
-      title: "Ajouter l'action Santé × 4",
-      desc: 'Ajoutez "Obtenir des échantillons de santé" pour : FC repos, HRV (variabilité FC), Sommeil (total min.), Énergie active (hier, somme).',
+      emoji: "❤️",
+      title: 'Chercher "Obtenir des échantillons de santé"',
+      detail: "Ajouter 3 fois cette action :\n• FC repos — Dernières 24h\n• Variabilité FC — Dernières 24h\n• Énergie active — Hier (activer Somme)",
     },
     {
       num: 3,
-      title: "Ajouter l'action Contenu d'URL",
-      desc: `Méthode POST vers ${backendUrl}/api/wearable/sync\nEn-tête x-user-id : votre UUID (ci-dessous)\nCorps JSON : voir modèle.`,
+      emoji: "📅",
+      title: 'Ajouter "Date" puis "Formater la date"',
+      detail: 'Format personnalisé : yyyy-MM-dd',
     },
     {
       num: 4,
-      title: "Automatiser à 7h00",
-      desc: 'Dans l\'onglet Automatisation → Nouvelle → Heure du jour → 7h00 chaque jour → "Exécuter le raccourci".',
+      emoji: "🔢",
+      title: 'Ajouter "Obtenir l\'élément de la liste"',
+      detail: "3 fois : une pour FC, une pour HRV, une pour Calories\nChoisir le 1er élément de chaque liste",
+    },
+    {
+      num: 5,
+      emoji: "🌐",
+      title: 'Ajouter "Contenu d\'URL"',
+      detail: `Méthode : POST\nURL : ${backendUrl}/api/wearable/sync\nEn-têtes : Content-Type = application/json\n           x-user-id = [ton UUID ci-dessous]\nCorps JSON : date, resting_hr, hrv_rmssd, active_calories`,
+    },
+    {
+      num: 6,
+      emoji: "⏰",
+      title: "Automatisation → Heure du jour → 7h00",
+      detail: "Exécuter le raccourci — désactiver \"Demander avant\"",
     },
   ];
-
-  // Route Next.js locale — même domaine que le frontend, pas de CORS
-  const shortcutDownloadUrl = userId
-    ? `/api/shortcut?user_id=${userId}&backend_url=${encodeURIComponent(backendUrl)}`
-    : null;
 
   return (
     <div className="space-y-4">
 
-      {/* ── Bouton d'installation ─────────────────────────────────────────── */}
-      <div className="bg-brand-500/10 border border-brand-500/30 rounded-2xl p-5 text-center">
-        <p className="text-2xl mb-2">⌚</p>
-        <h2 className="text-base font-bold text-white mb-1">Installer le Raccourci</h2>
-        {shortcutDownloadUrl ? (
-          <a
-            href={shortcutDownloadUrl}
-            className="block w-full py-3 bg-brand-500 rounded-xl font-semibold text-white text-sm hover:bg-brand-600 transition"
-          >
-            Télécharger le Raccourci →
-          </a>
-        ) : (
-          <div className="w-full py-3 bg-surface-muted rounded-xl text-slate-500 text-sm">
-            Chargement…
-          </div>
-        )}
-        <div className="mt-4 text-left space-y-2">
-          {[
-            ["1", "Appuie sur le bouton ci-dessus — une vibration confirme le téléchargement"],
-            ["2", "Ouvre l'app Fichiers → Téléchargements"],
-            ["3", "Appuie sur Forme1-AppleWatch.shortcut"],
-            ["4", "Raccourcis s'ouvre → appuie sur Ajouter le raccourci"],
-          ].map(([n, txt]) => (
-            <div key={n} className="flex gap-3 items-start">
-              <span className="w-5 h-5 rounded-full bg-brand-500/30 text-brand-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
-              <span className="text-xs text-slate-400">{txt}</span>
-            </div>
-          ))}
-        </div>
+      {/* Note iOS 15+ */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-xs text-blue-300">
+        <strong>iOS 15+ :</strong> Apple ne permet plus d'importer des raccourcis depuis des fichiers externes. Il faut le créer manuellement une seule fois — ça prend environ 5 minutes.
       </div>
 
-      {/* ── Prérequis ────────────────────────────────────────────────────── */}
-      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-xs text-amber-300 space-y-1">
-        <p className="font-semibold">Avant d'installer :</p>
-        <p>1. Réglages → Raccourcis → activer <strong>Autoriser les raccourcis non fiables</strong></p>
-        <p>2. App Santé → autoriser Raccourcis à lire FC, HRV, Calories</p>
-        <p>3. Portez votre Apple Watch au moins 2 nuits (pour HRV)</p>
-      </div>
-
-      {/* ── Ce que le Raccourci collecte ─────────────────────────────────── */}
+      {/* UUID à copier */}
       <div className="bg-surface-card rounded-2xl p-4">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Données collectées</h2>
-        <div className="space-y-2 text-sm">
-          {[
-            ["❤️", "FC repos", "Dernières 24h", "30% du score"],
-            ["📈", "HRV (RMSSD)", "Dernières 24h", "50% du score"],
-            ["🔥", "Calories actives", "Hier", "Calibrage séance"],
-          ].map(([icon, name, period, use]) => (
-            <div key={name} className="flex items-center gap-3">
-              <span className="text-base w-6 text-center">{icon}</span>
-              <span className="flex-1 text-white font-medium">{name}</span>
-              <span className="text-xs text-slate-500">{period}</span>
-              <span className="text-xs text-brand-400">{use}</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-3">
-            <span className="text-base w-6 text-center">🌙</span>
-            <span className="flex-1 text-white font-medium">Sommeil</span>
-            <span className="text-xs text-slate-500">Manuel</span>
-            <span className="text-xs text-brand-400">20% du score</span>
-          </div>
+        <p className="text-xs text-slate-400 mb-2">
+          Ton identifiant — à coller dans l'en-tête <code className="bg-surface-muted px-1 rounded text-brand-300">x-user-id</code> à l'étape 5 :
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 bg-surface-muted rounded-lg px-3 py-2 text-xs text-slate-300 break-all">
+            {userId ?? "Chargement…"}
+          </code>
+          <button
+            onClick={onCopy}
+            className="px-3 py-2 bg-brand-500 rounded-lg text-xs font-semibold text-white whitespace-nowrap transition hover:bg-brand-600"
+          >
+            {copied ? "Copié ✓" : "Copier"}
+          </button>
         </div>
-        <p className="text-xs text-slate-500 mt-3">Le sommeil n'est pas accessible automatiquement depuis HealthKit — utilise la saisie manuelle dans l'onglet Aujourd'hui.</p>
       </div>
 
-      {/* ── UUID (pour installation manuelle) ───────────────────────────── */}
-      <details className="bg-surface-card rounded-2xl p-4">
-        <summary className="text-sm font-semibold text-slate-400 cursor-pointer">Installation manuelle (avancé)</summary>
-        <div className="mt-4 space-y-4">
-          <div>
-            <p className="text-xs text-slate-400 mb-2">UUID à coller dans l'en-tête <code className="bg-surface-muted px-1 rounded text-brand-300">x-user-id</code> :</p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 bg-surface-muted rounded-lg px-3 py-2 text-xs text-slate-300 break-all">
-                {userId ?? "Chargement…"}
-              </code>
-              <button
-                onClick={onCopy}
-                className="px-3 py-2 bg-brand-500 rounded-lg text-xs font-semibold text-white whitespace-nowrap transition hover:bg-brand-600"
-              >
-                {copied ? "Copié ✓" : "Copier"}
-              </button>
+      {/* Étapes */}
+      <div className="space-y-2">
+        {actions.map((a) => (
+          <div key={a.num} className="bg-surface-card rounded-xl p-4 flex gap-3">
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <span className="text-lg">{a.emoji}</span>
+              <span className="text-xs text-brand-400 font-bold">{a.num}</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white mb-1">{a.title}</p>
+              {a.detail && (
+                <p className="text-xs text-slate-400 whitespace-pre-line">{a.detail}</p>
+              )}
             </div>
           </div>
-          <div>
-            <p className="text-xs text-slate-400 mb-2">URL de l'endpoint :</p>
-            <code className="block bg-surface-muted rounded-lg px-3 py-2 text-xs text-brand-300 break-all">
-              {backendUrl}/api/wearable/sync
-            </code>
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 mb-2">Corps JSON :</p>
-            <pre className="bg-surface-muted rounded-lg p-3 text-xs text-slate-300 overflow-x-auto">{`{
-  "date": "2026-06-01",
-  "resting_hr": 58,
-  "hrv_rmssd": 47.5,
-  "sleep_duration_min": 452,
-  "sleep_quality": 4,
-  "active_calories": 380
+        ))}
+      </div>
+
+      {/* Corps JSON de référence */}
+      <div className="bg-surface-card rounded-2xl p-4">
+        <p className="text-xs text-slate-400 mb-2 font-semibold">Corps JSON de référence (étape 5) :</p>
+        <pre className="bg-surface-muted rounded-lg p-3 text-xs text-slate-300 overflow-x-auto">{`{
+  "date": "[Date formatée]",
+  "resting_hr": [FC valeur],
+  "hrv_rmssd": [HRV valeur],
+  "active_calories": [Calories valeur]
 }`}</pre>
-          </div>
-          <div className="space-y-3">
-            {steps.map((s) => (
-              <div key={s.num} className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                  {s.num}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-white mb-0.5">{s.title}</p>
-                  <p className="text-xs text-slate-400 whitespace-pre-line">{s.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+      </div>
+
+      {/* Données collectées */}
+      <div className="bg-surface-card rounded-2xl p-4">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Ce que ça collecte</h2>
+        <div className="space-y-2">
+          {[
+            ["❤️", "FC repos",        "30% du score récup."],
+            ["📈", "HRV (RMSSD)",     "50% du score récup."],
+            ["🔥", "Calories actives","Calibrage séance"],
+            ["🌙", "Sommeil",         "Saisie manuelle (20%)"],
+          ].map(([icon, name, use]) => (
+            <div key={name} className="flex items-center gap-2 text-xs">
+              <span>{icon}</span>
+              <span className="flex-1 text-slate-300">{name}</span>
+              <span className="text-brand-400">{use}</span>
+            </div>
+          ))}
         </div>
-      </details>
+      </div>
     </div>
   );
 }
