@@ -1,9 +1,13 @@
 """
-Route : synchronisation des données Apple Watch via Raccourci iOS.
+Routes : synchronisation et consultation des données Apple Watch.
 POST /api/wearable/sync
+GET  /api/wearable/today
+GET  /api/wearable/history
 """
+from datetime import date, timedelta
+from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Query
 
 from app.database import supabase
 from app.models import WearableSync, WearableRead
@@ -45,3 +49,39 @@ async def sync_wearable(
         raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde des données.")
 
     return WearableRead(**result.data[0])
+
+
+@router.get("/today", response_model=Optional[WearableRead])
+async def get_today(
+    x_user_id: UUID = Header(..., description="UUID Supabase de l'utilisateur"),
+):
+    """Retourne les données wearable du jour, ou null si non synchronisées."""
+    today = date.today().isoformat()
+    result = (
+        supabase.table("wearable_data")
+        .select("*")
+        .eq("user_id", str(x_user_id))
+        .eq("date", today)
+        .execute()
+    )
+    if not result.data:
+        return None
+    return WearableRead(**result.data[0])
+
+
+@router.get("/history", response_model=list[WearableRead])
+async def get_history(
+    x_user_id: UUID = Header(..., description="UUID Supabase de l'utilisateur"),
+    days: int = Query(default=7, ge=1, le=30, description="Nombre de jours d'historique"),
+):
+    """Retourne les N derniers jours de données wearable (plus récent en premier)."""
+    since = (date.today() - timedelta(days=days - 1)).isoformat()
+    result = (
+        supabase.table("wearable_data")
+        .select("*")
+        .eq("user_id", str(x_user_id))
+        .gte("date", since)
+        .order("date", desc=True)
+        .execute()
+    )
+    return [WearableRead(**row) for row in (result.data or [])]

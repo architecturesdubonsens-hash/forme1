@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { getCurrentProgram, generateProgram, recommendedSnacks } from "@/lib/api";
 import SessionCard from "@/components/SessionCard";
 import RecoveryBadge from "@/components/RecoveryBadge";
+import WearableWidget from "@/components/WearableWidget";
 import BottomNav from "@/components/BottomNav";
 import WeekSchedulePicker, { type DaySchedule } from "@/components/WeekSchedulePicker";
 import SnackCard, { type SnackActivity } from "@/components/SnackCard";
@@ -115,17 +116,24 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen pb-24 px-4 py-8 max-w-lg mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-extrabold">
             {userName ? `Bonjour, ${userName}` : "Bonjour"}
           </h1>
-          <p className="text-slate-400 text-sm mt-0.5">
-            {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-          </p>
+          <RecoveryBadge userId={userId} />
         </div>
-        <RecoveryBadge userId={userId} />
+        <p className="text-slate-400 text-sm">
+          {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+        </p>
       </div>
+
+      {/* Widget Apple Watch */}
+      {userId && (
+        <div className="mb-5">
+          <WearableWidget userId={userId} />
+        </div>
+      )}
 
       {/* Pas de programme → CTA */}
       {!program || sessions.length === 0 ? (
