@@ -372,10 +372,6 @@ function SetupTab({
       <div className="bg-brand-500/10 border border-brand-500/30 rounded-2xl p-5 text-center">
         <p className="text-2xl mb-2">⌚</p>
         <h2 className="text-base font-bold text-white mb-1">Installer le Raccourci</h2>
-        <p className="text-xs text-slate-400 mb-4">
-          Appuie sur le bouton depuis <strong>Safari sur iPhone</strong>.
-          iOS te propose automatiquement de l'ouvrir dans Raccourcis.
-        </p>
         {shortcutDownloadUrl ? (
           <a
             href={shortcutDownloadUrl}
@@ -388,6 +384,19 @@ function SetupTab({
             Chargement…
           </div>
         )}
+        <div className="mt-4 text-left space-y-2">
+          {[
+            ["1", "Appuie sur le bouton ci-dessus — une vibration confirme le téléchargement"],
+            ["2", "Ouvre l'app Fichiers → Téléchargements"],
+            ["3", "Appuie sur Forme1-AppleWatch.shortcut"],
+            ["4", "Raccourcis s'ouvre → appuie sur Ajouter le raccourci"],
+          ].map(([n, txt]) => (
+            <div key={n} className="flex gap-3 items-start">
+              <span className="w-5 h-5 rounded-full bg-brand-500/30 text-brand-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
+              <span className="text-xs text-slate-400">{txt}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Prérequis ────────────────────────────────────────────────────── */}

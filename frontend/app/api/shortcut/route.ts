@@ -167,7 +167,8 @@ export async function GET(request: NextRequest) {
 
   return new NextResponse(xml, {
     headers: {
-      "Content-Type": "application/x-apple-shortcuts",
+      // application/octet-stream + extension .shortcut → iOS propose "Ouvrir dans Raccourcis"
+      "Content-Type": "application/octet-stream",
       "Content-Disposition": 'attachment; filename="Forme1-AppleWatch.shortcut"',
       "Cache-Control": "no-store",
     },
