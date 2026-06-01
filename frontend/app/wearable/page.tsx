@@ -360,9 +360,9 @@ function SetupTab({
     },
   ];
 
-  // URL directe du fichier .shortcut — Safari sur iPhone l'ouvre dans Raccourcis
+  // Route Next.js locale — même domaine que le frontend, pas de CORS
   const shortcutDownloadUrl = userId
-    ? `${backendUrl}/api/wearable/shortcut?user_id=${userId}&backend_url=${encodeURIComponent(backendUrl)}`
+    ? `/api/shortcut?user_id=${userId}&backend_url=${encodeURIComponent(backendUrl)}`
     : null;
 
   return (
