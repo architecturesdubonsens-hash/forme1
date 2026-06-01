@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 
-// ── Helpers XML plist ─────────────────────────────────────────────────────────
+export const runtime = "nodejs";
 
-function esc(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// ── UUID déterministe sans dépendance externe ────────────────────────────────
+
+function djb2(s: string, seed = 5381): number {
+  let h = seed >>> 0;
+  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) + s.charCodeAt(i)) >>> 0;
+  return h;
 }
 
 function stableUuid(userId: string, key: string): string {
-  const h = crypto.createHash("md5").update(`${userId}-${key}`).digest("hex");
-  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`.toUpperCase();
+  const seed = `${userId}:${key}`;
+  const a = djb2(seed).toString(16).padStart(8, "0");
+  const b = djb2(seed, 0x1234abcd).toString(16).padStart(8, "0");
+  const c = djb2(seed, 0xdeadbeef).toString(16).padStart(8, "0");
+  const d = djb2(seed, 0xcafebabe).toString(16).padStart(8, "0");
+  const h = a + b + c + d;
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20,32)}`.toUpperCase();
+}
+
+// ── Helpers XML plist ─────────────────────────────────────────────────────────
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function textVal(text: string): string {
@@ -29,103 +43,92 @@ function wfDict(items: string[]): string {
 }
 
 function quantityRead(uid: string, hkType: string, outputName: string, mode = "From"): string {
-  const extra = mode === "From"
+  const range = mode === "From"
     ? `<key>WFHealthDateUnitKey</key><string>Days</string><key>WFHealthStartDate</key><integer>-1</integer>`
     : "";
   return `<dict>
-    <key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.health.quantity.read</string>
-    <key>WFWorkflowActionParameters</key><dict>
-      <key>WFHealthQuantityTypeKey</key><string>${hkType}</string>
-      <key>WFHealthDateRangePickerMode</key><string>${mode}</string>
-      ${extra}
-      <key>CustomOutputName</key><string>${esc(outputName)}</string>
-      <key>UUID</key><string>${uid}</string>
-    </dict>
-  </dict>`;
+<key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.health.quantity.read</string>
+<key>WFWorkflowActionParameters</key><dict>
+  <key>WFHealthQuantityTypeKey</key><string>${hkType}</string>
+  <key>WFHealthDateRangePickerMode</key><string>${mode}</string>
+  ${range}
+  <key>CustomOutputName</key><string>${esc(outputName)}</string>
+  <key>UUID</key><string>${uid}</string>
+</dict></dict>`;
 }
 
-function firstItem(uid: string, inputUuid: string, inputName: string, outputName: string): string {
+function firstItem(uid: string, inUuid: string, inName: string, outName: string): string {
   return `<dict>
-    <key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.getitemfromlist</string>
-    <key>WFWorkflowActionParameters</key><dict>
-      <key>WFItemIndex</key><integer>1</integer>
-      <key>WFInput</key>${outputRef(inputUuid, inputName)}
-      <key>CustomOutputName</key><string>${esc(outputName)}</string>
-      <key>UUID</key><string>${uid}</string>
-    </dict>
-  </dict>`;
+<key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.getitemfromlist</string>
+<key>WFWorkflowActionParameters</key><dict>
+  <key>WFItemIndex</key><integer>1</integer>
+  <key>WFInput</key>${outputRef(inUuid, inName)}
+  <key>CustomOutputName</key><string>${esc(outName)}</string>
+  <key>UUID</key><string>${uid}</string>
+</dict></dict>`;
 }
 
-// ── Générateur principal ──────────────────────────────────────────────────────
+// ── Générateur de plist ───────────────────────────────────────────────────────
 
 function generatePlist(userId: string, backendUrl: string): string {
+  const keys = ["rhr","hrv","cals","date","datefmt","rhr_v","hrv_v","cals_v","req","notif"];
   const u: Record<string, string> = {};
-  for (const k of ["rhr","hrv","cals","date","datefmt","rhr_v","hrv_v","cals_v","req","notif"]) {
-    u[k] = stableUuid(userId, k);
-  }
+  for (const k of keys) u[k] = stableUuid(userId, k);
 
   const syncUrl = esc(backendUrl.replace(/\/$/, "") + "/api/wearable/sync");
 
   const actions = [
-    quantityRead(u.rhr,  "HKQuantityTypeIdentifierRestingHeartRate",        "FC Repos"),
+    quantityRead(u.rhr,  "HKQuantityTypeIdentifierRestingHeartRate",         "FC Repos"),
     quantityRead(u.hrv,  "HKQuantityTypeIdentifierHeartRateVariabilitySDNN", "HRV"),
-    quantityRead(u.cals, "HKQuantityTypeIdentifierActiveEnergyBurned",       "Calories", "Yesterday"),
+    quantityRead(u.cals, "HKQuantityTypeIdentifierActiveEnergyBurned",        "Calories", "Yesterday"),
 
-    // Date du jour
     `<dict>
-      <key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.date</string>
-      <key>WFWorkflowActionParameters</key><dict>
-        <key>CustomOutputName</key><string>Date Brute</string>
-        <key>UUID</key><string>${u.date}</string>
-      </dict>
-    </dict>`,
+<key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.date</string>
+<key>WFWorkflowActionParameters</key><dict>
+  <key>CustomOutputName</key><string>Date Brute</string>
+  <key>UUID</key><string>${u.date}</string>
+</dict></dict>`,
 
-    // Format YYYY-MM-DD
     `<dict>
-      <key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.format.date</string>
-      <key>WFWorkflowActionParameters</key><dict>
-        <key>WFDateFormatStyle</key><string>Custom</string>
-        <key>WFDateFormat</key><string>yyyy-MM-dd</string>
-        <key>WFInput</key>${outputRef(u.date, "Date Brute")}
-        <key>CustomOutputName</key><string>Date</string>
-        <key>UUID</key><string>${u.datefmt}</string>
-      </dict>
-    </dict>`,
+<key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.format.date</string>
+<key>WFWorkflowActionParameters</key><dict>
+  <key>WFDateFormatStyle</key><string>Custom</string>
+  <key>WFDateFormat</key><string>yyyy-MM-dd</string>
+  <key>WFInput</key>${outputRef(u.date, "Date Brute")}
+  <key>CustomOutputName</key><string>Date</string>
+  <key>UUID</key><string>${u.datefmt}</string>
+</dict></dict>`,
 
     firstItem(u.rhr_v,  u.rhr,  "FC Repos",  "FC Valeur"),
     firstItem(u.hrv_v,  u.hrv,  "HRV",       "HRV Valeur"),
     firstItem(u.cals_v, u.cals, "Calories",  "Calories Valeur"),
 
-    // Requête POST
     `<dict>
-      <key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.downloadurl</string>
-      <key>WFWorkflowActionParameters</key><dict>
-        <key>WFURL</key><string>${syncUrl}</string>
-        <key>WFHTTPMethod</key><string>POST</string>
-        <key>WFHTTPBodyType</key><string>JSON</string>
-        <key>WFHTTPRequestHeaders</key>${wfDict([
-          dictItem("Content-Type", textVal("application/json")),
-          dictItem("x-user-id",    textVal(userId)),
-        ])}
-        <key>WFFormValues</key>${wfDict([
-          dictItem("date",            outputRef(u.datefmt, "Date"),           0),
-          dictItem("resting_hr",      outputRef(u.rhr_v,  "FC Valeur"),       3),
-          dictItem("hrv_rmssd",       outputRef(u.hrv_v,  "HRV Valeur"),      3),
-          dictItem("active_calories", outputRef(u.cals_v, "Calories Valeur"), 3),
-        ])}
-        <key>UUID</key><string>${u.req}</string>
-      </dict>
-    </dict>`,
+<key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.downloadurl</string>
+<key>WFWorkflowActionParameters</key><dict>
+  <key>WFURL</key><string>${syncUrl}</string>
+  <key>WFHTTPMethod</key><string>POST</string>
+  <key>WFHTTPBodyType</key><string>JSON</string>
+  <key>WFHTTPRequestHeaders</key>${wfDict([
+    dictItem("Content-Type", textVal("application/json")),
+    dictItem("x-user-id",    textVal(userId)),
+  ])}
+  <key>WFFormValues</key>${wfDict([
+    dictItem("date",            outputRef(u.datefmt, "Date"),            0),
+    dictItem("resting_hr",      outputRef(u.rhr_v,   "FC Valeur"),       3),
+    dictItem("hrv_rmssd",       outputRef(u.hrv_v,   "HRV Valeur"),      3),
+    dictItem("active_calories", outputRef(u.cals_v,  "Calories Valeur"), 3),
+  ])}
+  <key>UUID</key><string>${u.req}</string>
+</dict></dict>`,
 
-    // Notification
     `<dict>
-      <key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.notification.show</string>
-      <key>WFWorkflowActionParameters</key><dict>
-        <key>WFNotificationActionTitle</key><string>Forme 1</string>
-        <key>WFInput</key>${textVal("Apple Watch synchronisée ✓")}
-        <key>UUID</key><string>${u.notif}</string>
-      </dict>
-    </dict>`,
+<key>WFWorkflowActionIdentifier</key><string>is.workflow.actions.notification.show</string>
+<key>WFWorkflowActionParameters</key><dict>
+  <key>WFNotificationActionTitle</key><string>Forme 1</string>
+  <key>WFInput</key>${textVal("Apple Watch synchronisée ✓")}
+  <key>UUID</key><string>${u.notif}</string>
+</dict></dict>`,
   ].join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -148,7 +151,7 @@ function generatePlist(userId: string, backendUrl: string): string {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const userId    = searchParams.get("user_id") ?? "";
+  const userId     = searchParams.get("user_id") ?? "";
   const backendUrl = searchParams.get("backend_url")
     ?? process.env.NEXT_PUBLIC_API_URL
     ?? "";
