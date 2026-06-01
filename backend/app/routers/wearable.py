@@ -3,11 +3,13 @@ Routes : synchronisation et consultation des données Apple Watch.
 POST /api/wearable/sync
 GET  /api/wearable/today
 GET  /api/wearable/history
+GET  /api/wearable/shortcut
 """
 from datetime import date, timedelta
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi.responses import Response
 
 from app.database import supabase
 from app.models import WearableSync, WearableRead
@@ -85,3 +87,31 @@ async def get_history(
         .execute()
     )
     return [WearableRead(**row) for row in (result.data or [])]
+
+
+@router.get("/shortcut")
+async def download_shortcut(
+    user_id: str = Query(..., description="UUID Supabase de l'utilisateur"),
+    backend_url: str = Query(..., description="URL de base du backend"),
+):
+    """
+    Génère et retourne un fichier .shortcut iOS prêt à importer.
+    Ouvrir ce lien depuis Safari sur iPhone l'importe directement
+    dans l'app Raccourcis (nécessite 'Autoriser les raccourcis non fiables').
+    """
+    try:
+        UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="UUID invalide.")
+
+    from app.services.shortcut_generator import generate_shortcut_plist
+    data = generate_shortcut_plist(user_id=user_id, backend_url=backend_url)
+
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": 'attachment; filename="Forme1-AppleWatch.shortcut"',
+            "Cache-Control": "no-store",
+        },
+    )

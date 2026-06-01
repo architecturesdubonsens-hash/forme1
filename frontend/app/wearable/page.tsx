@@ -360,63 +360,131 @@ function SetupTab({
     },
   ];
 
+  // Lien d'installation automatique (shortcuts:// ne fonctionne que sur iOS)
+  const shortcutDownloadUrl = userId
+    ? `${backendUrl}/api/wearable/shortcut?user_id=${userId}&backend_url=${encodeURIComponent(backendUrl)}`
+    : null;
+  const shortcutImportUrl = shortcutDownloadUrl
+    ? `shortcuts://x-callback-url/import-workflow?url=${encodeURIComponent(shortcutDownloadUrl)}&name=Forme+1+Apple+Watch`
+    : null;
+
   return (
     <div className="space-y-4">
-      <div className="bg-surface-card rounded-2xl p-4">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Votre identifiant</h2>
-        <p className="text-xs text-slate-400 mb-2">Copiez cet UUID dans l'en-tête <code className="bg-surface-muted px-1 rounded text-brand-300">x-user-id</code> du Raccourci.</p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 bg-surface-muted rounded-lg px-3 py-2 text-xs text-slate-300 break-all">
-            {userId ?? "Chargement…"}
-          </code>
-          <button
-            onClick={onCopy}
-            className="px-3 py-2 bg-brand-500 rounded-lg text-xs font-semibold text-white whitespace-nowrap transition hover:bg-brand-600"
+
+      {/* ── Bouton d'installation automatique ─────────────────────────────── */}
+      <div className="bg-brand-500/10 border border-brand-500/30 rounded-2xl p-5 text-center">
+        <p className="text-2xl mb-2">⌚</p>
+        <h2 className="text-base font-bold text-white mb-1">Installation automatique</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Ouvre ce lien depuis <strong>Safari sur iPhone</strong>.
+          Le Raccourci s'importe avec ton UUID et l'URL déjà configurés.
+        </p>
+        {shortcutImportUrl ? (
+          <a
+            href={shortcutImportUrl}
+            className="block w-full py-3 bg-brand-500 rounded-xl font-semibold text-white text-sm hover:bg-brand-600 transition"
           >
-            {copied ? "Copié ✓" : "Copier"}
-          </button>
+            Installer le Raccourci →
+          </a>
+        ) : (
+          <div className="w-full py-3 bg-surface-muted rounded-xl text-slate-500 text-sm">
+            Chargement…
+          </div>
+        )}
+        {shortcutDownloadUrl && (
+          <a
+            href={shortcutDownloadUrl}
+            className="block mt-2 text-xs text-slate-500 hover:text-slate-300 transition"
+          >
+            Télécharger le fichier .shortcut
+          </a>
+        )}
+      </div>
+
+      {/* ── Prérequis ────────────────────────────────────────────────────── */}
+      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-xs text-amber-300 space-y-1">
+        <p className="font-semibold">Avant d'installer :</p>
+        <p>1. Réglages → Raccourcis → activer <strong>Autoriser les raccourcis non fiables</strong></p>
+        <p>2. App Santé → autoriser Raccourcis à lire FC, HRV, Calories</p>
+        <p>3. Portez votre Apple Watch au moins 2 nuits (pour HRV)</p>
+      </div>
+
+      {/* ── Ce que le Raccourci collecte ─────────────────────────────────── */}
+      <div className="bg-surface-card rounded-2xl p-4">
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Données collectées</h2>
+        <div className="space-y-2 text-sm">
+          {[
+            ["❤️", "FC repos", "Dernières 24h", "30% du score"],
+            ["📈", "HRV (RMSSD)", "Dernières 24h", "50% du score"],
+            ["🔥", "Calories actives", "Hier", "Calibrage séance"],
+          ].map(([icon, name, period, use]) => (
+            <div key={name} className="flex items-center gap-3">
+              <span className="text-base w-6 text-center">{icon}</span>
+              <span className="flex-1 text-white font-medium">{name}</span>
+              <span className="text-xs text-slate-500">{period}</span>
+              <span className="text-xs text-brand-400">{use}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-3">
+            <span className="text-base w-6 text-center">🌙</span>
+            <span className="flex-1 text-white font-medium">Sommeil</span>
+            <span className="text-xs text-slate-500">Manuel</span>
+            <span className="text-xs text-brand-400">20% du score</span>
+          </div>
         </div>
+        <p className="text-xs text-slate-500 mt-3">Le sommeil n'est pas accessible automatiquement depuis HealthKit — utilise la saisie manuelle dans l'onglet Aujourd'hui.</p>
       </div>
 
-      <div className="bg-surface-card rounded-2xl p-4">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">URL du backend</h2>
-        <code className="block bg-surface-muted rounded-lg px-3 py-2 text-xs text-brand-300 break-all">
-          {backendUrl}/api/wearable/sync
-        </code>
-      </div>
-
-      <div className="bg-surface-card rounded-2xl p-4">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Modèle JSON</h2>
-        <pre className="bg-surface-muted rounded-lg p-3 text-xs text-slate-300 overflow-x-auto">{`{
+      {/* ── UUID (pour installation manuelle) ───────────────────────────── */}
+      <details className="bg-surface-card rounded-2xl p-4">
+        <summary className="text-sm font-semibold text-slate-400 cursor-pointer">Installation manuelle (avancé)</summary>
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="text-xs text-slate-400 mb-2">UUID à coller dans l'en-tête <code className="bg-surface-muted px-1 rounded text-brand-300">x-user-id</code> :</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-surface-muted rounded-lg px-3 py-2 text-xs text-slate-300 break-all">
+                {userId ?? "Chargement…"}
+              </code>
+              <button
+                onClick={onCopy}
+                className="px-3 py-2 bg-brand-500 rounded-lg text-xs font-semibold text-white whitespace-nowrap transition hover:bg-brand-600"
+              >
+                {copied ? "Copié ✓" : "Copier"}
+              </button>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-2">URL de l'endpoint :</p>
+            <code className="block bg-surface-muted rounded-lg px-3 py-2 text-xs text-brand-300 break-all">
+              {backendUrl}/api/wearable/sync
+            </code>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-2">Corps JSON :</p>
+            <pre className="bg-surface-muted rounded-lg p-3 text-xs text-slate-300 overflow-x-auto">{`{
   "date": "2026-06-01",
   "resting_hr": 58,
   "hrv_rmssd": 47.5,
   "sleep_duration_min": 452,
   "sleep_quality": 4,
-  "active_calories": 380,
-  "steps": 9200
+  "active_calories": 380
 }`}</pre>
-        <p className="text-xs text-slate-500 mt-2">Tous les champs sont optionnels sauf <code className="text-brand-300">date</code>. Plus vous en renseignez, plus le score est précis.</p>
-      </div>
-
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Étapes</h2>
-        {steps.map((s) => (
-          <div key={s.num} className="flex gap-3 bg-surface-card rounded-xl p-4">
-            <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-              {s.num}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white mb-1">{s.title}</p>
-              <p className="text-xs text-slate-400 whitespace-pre-line">{s.desc}</p>
-            </div>
           </div>
-        ))}
-      </div>
-
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-blue-300">
-        <strong>Prérequis :</strong> Apple Watch appairée, app Santé activée, autorisation accordée à Raccourcis depuis Réglages → Santé → Sources.
-      </div>
+          <div className="space-y-3">
+            {steps.map((s) => (
+              <div key={s.num} className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                  {s.num}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white mb-0.5">{s.title}</p>
+                  <p className="text-xs text-slate-400 whitespace-pre-line">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
