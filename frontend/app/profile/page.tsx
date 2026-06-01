@@ -175,6 +175,10 @@ export default function ProfilePage() {
       )}
 
       <div className="mt-6 space-y-3">
+        <button onClick={() => router.push("/wearable")}
+          className="w-full py-3 border border-surface-muted rounded-xl text-slate-300 text-sm font-medium hover:bg-surface-card transition flex items-center justify-center gap-2">
+          ⌚ Connecter Apple Watch
+        </button>
         <button onClick={() => router.push("/onboarding/assessment")}
           className="w-full py-3 border border-surface-muted rounded-xl text-slate-300 text-sm font-medium hover:bg-surface-card transition">
           Refaire les tests d'évaluation

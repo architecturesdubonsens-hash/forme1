@@ -1,6 +1,12 @@
 """
 Calcul du score de récupération (0–100) à partir des données Apple Watch.
-Basé sur : HRV (poids 50%), FC repos (30%), qualité sommeil (20%).
+Basé sur : HRV (poids 50%), FC repos (30%), sommeil (20%).
+
+Interprétation :
+  0–39  → Récupération faible  → séance légère ou repos actif
+  40–69 → Récupération normale → programme standard
+  70–89 → Bonne récupération   → peut hausser l'intensité
+  90–100→ Excellente           → séance haute intensité possible
 """
 from app.models import WearableSync
 
@@ -9,17 +15,11 @@ def compute_recovery_score(data: WearableSync) -> int | None:
     """
     Retourne un score de récupération entre 0 et 100, ou None si les données
     sont insuffisantes pour calculer (moins de 2 métriques disponibles).
-
-    Interprétation :
-      0–39  → Récupération faible  → séance légère ou repos actif
-      40–69 → Récupération normale → programme standard
-      70–89 → Bonne récupération   → peut hausser l'intensité
-      90–100→ Excellente           → séance haute intensité possible
     """
     scores: list[float] = []
     weights: list[float] = []
 
-    # HRV : score normalisé sur une échelle 20–100 ms (typique adulte sain)
+    # HRV : score normalisé sur une échelle 20–80 ms (typique adulte sain)
     if data.hrv_rmssd is not None:
         hrv_score = _normalize(data.hrv_rmssd, low=20, high=80)
         scores.append(hrv_score)
@@ -31,9 +31,14 @@ def compute_recovery_score(data: WearableSync) -> int | None:
         scores.append(hr_score)
         weights.append(0.30)
 
-    # Sommeil : qualité 1–5 convertie en 0–100
+    # Sommeil : qualité subjective 1–5 prioritaire, sinon durée (6–9h idéal)
     if data.sleep_quality is not None:
         sleep_score = (data.sleep_quality - 1) / 4 * 100
+        scores.append(sleep_score)
+        weights.append(0.20)
+    elif data.sleep_duration_min is not None:
+        # 7h30 (450 min) = optimal ; < 5h (300 min) = mauvais ; > 9h (540 min) = ok
+        sleep_score = _normalize(data.sleep_duration_min, low=300, high=540)
         scores.append(sleep_score)
         weights.append(0.20)
 

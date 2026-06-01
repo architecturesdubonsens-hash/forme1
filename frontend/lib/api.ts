@@ -33,6 +33,28 @@ export function syncWearable(userId: string, data: object) {
   });
 }
 
+export function getWearableToday(userId: string) {
+  return request<WearableData | null>("/api/wearable/today", { userId });
+}
+
+export function getWearableHistory(userId: string, days = 7) {
+  return request<WearableData[]>(`/api/wearable/history?days=${days}`, { userId });
+}
+
+export interface WearableData {
+  id: string;
+  user_id: string;
+  date: string;
+  resting_hr: number | null;
+  hrv_rmssd: number | null;
+  sleep_duration_min: number | null;
+  sleep_quality: number | null;
+  active_calories: number | null;
+  steps: number | null;
+  recovery_score: number | null;
+  synced_at: string;
+}
+
 // ── Programme ─────────────────────────────────────────────────────────────────
 
 export function generateProgram(userId: string, weekNumber: number, weekStart: string, weekSchedule?: object[], weekContext?: string) {
