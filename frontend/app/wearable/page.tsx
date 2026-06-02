@@ -486,6 +486,59 @@ function SetupTab({
   "active_calories": [Calories valeur]
 }`}</pre>
           </div>
+
+          {/* Alternative Scriptable */}
+          <div className="bg-surface-card rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">⚡</span>
+              <h3 className="text-sm font-semibold text-white">Alternative : Scriptable (plus simple)</h3>
+            </div>
+            <p className="text-xs text-slate-400">
+              Scriptable est une app iOS gratuite. Au lieu de configurer l'étape 5 ci-dessus,
+              télécharge ce script pré-rempli — ton Raccourci n'a plus qu'à lire les données
+              Santé et les passer à Scriptable.
+            </p>
+            {userId && (
+              <a
+                href={`/api/scriptable?user_id=${encodeURIComponent(userId)}&backend_url=${encodeURIComponent(backendUrl)}`}
+                download="Forme1-Sync.js"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-brand-500 hover:bg-brand-600 rounded-xl text-sm font-semibold text-white transition"
+              >
+                ⬇ Télécharger le script Scriptable
+              </a>
+            )}
+            <ol className="space-y-1.5 pt-1">
+              {[
+                "Installe Scriptable (App Store, gratuit)",
+                "Télécharge le script ci-dessus → ouvre-le depuis l'app Fichiers → Scriptable l'importe",
+                "Dans Raccourcis : effectue les étapes 1–4 pour lire FC, HRV et Calories",
+                "À la place de l'étape 5, ajoute « Exécuter un script Scriptable » → Forme1 Sync → passe les données en entrée",
+              ].map((text, i) => (
+                <li key={i} className="flex gap-2 items-start text-xs text-slate-400">
+                  <span className="text-brand-400 font-bold shrink-0">{i + 1}.</span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* Sur Mac */}
+          <div className="bg-surface-card rounded-2xl p-4 space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">💻</span>
+              <h3 className="text-sm font-semibold text-white">Configurer depuis un Mac (recommandé)</h3>
+            </div>
+            <p className="text-xs text-slate-400">
+              L'app Raccourcis sur macOS est bien plus facile à configurer avec un clavier et une
+              souris. Les raccourcis créés sur Mac se synchronisent automatiquement sur iPhone via
+              iCloud — pas besoin de les recréer.
+            </p>
+            <p className="text-xs text-slate-400">
+              Sur Mac : ouvre Raccourcis (Launchpad ou Réglages Système → Raccourcis), crée le
+              raccourci en suivant les étapes 1–6, puis enregistre. Il apparaît immédiatement dans
+              Raccourcis sur iPhone et peut être automatisé à 7h00.
+            </p>
+          </div>
         </>
       )}
     </div>
