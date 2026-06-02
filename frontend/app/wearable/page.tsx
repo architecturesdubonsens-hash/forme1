@@ -10,6 +10,7 @@ import {
   type WearableData,
 } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
+import { useWatchSource, WATCH_OPTIONS } from "@/lib/watchSource";
 
 type Tab = "status" | "setup" | "history";
 
@@ -20,6 +21,7 @@ export default function WearablePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("status");
   const [copied, setCopied] = useState(false);
+  const [watchSource, setWatchSource] = useWatchSource();
   const router = useRouter();
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function WearablePage() {
         )}
         {activeTab === "setup" && (
           <motion.div key="setup" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-            <SetupTab userId={userId} backendUrl={backendUrl} copied={copied} onCopy={copyId} />
+            <SetupTab userId={userId} backendUrl={backendUrl} copied={copied} onCopy={copyId} watchSource={watchSource} onChangeSource={setWatchSource} />
           </motion.div>
         )}
         {activeTab === "history" && (
@@ -324,11 +326,15 @@ function SetupTab({
   backendUrl,
   copied,
   onCopy,
+  watchSource,
+  onChangeSource,
 }: {
   userId: string | null;
   backendUrl: string;
   copied: boolean;
   onCopy: () => void;
+  watchSource: ReturnType<typeof useWatchSource>[0];
+  onChangeSource: ReturnType<typeof useWatchSource>[1];
 }) {
   const actions = [
     {
@@ -369,55 +375,119 @@ function SetupTab({
     },
   ];
 
+  // Instructions spécifiques par source
+  const sourceInstructions: Record<string, { banner: { color: string; text: string } | null; steps: typeof actions | null }> = {
+    apple_watch: {
+      banner: {
+        color: "bg-blue-500/10 border-blue-500/20 text-blue-300",
+        text: "iOS 15+ : le Raccourci doit être créé manuellement — environ 5 minutes.",
+      },
+      steps: actions,
+    },
+    garmin: {
+      banner: {
+        color: "bg-orange-500/10 border-orange-500/20 text-orange-300",
+        text: "Garmin → Apple Santé : dans Garmin Connect → Paramètres → Santé → Synchroniser avec Apple Santé. Active FC, HRV, Calories. Ensuite, le même Raccourci iOS lit ces données automatiquement.",
+      },
+      steps: actions,
+    },
+    coros: {
+      banner: {
+        color: "bg-blue-600/10 border-blue-600/20 text-blue-300",
+        text: "Coros → Apple Santé : dans l'app Coros → Profil → Santé & Sport → Sync Apple Santé. Active FC, Calories. Ensuite, le même Raccourci iOS lit ces données.",
+      },
+      steps: actions,
+    },
+    none: {
+      banner: {
+        color: "bg-slate-500/10 border-slate-500/20 text-slate-300",
+        text: "Sans montre : utilise la saisie manuelle dans l'onglet Aujourd'hui après chaque journée ou le matin au réveil.",
+      },
+      steps: null,
+    },
+  };
+
+  const current = sourceInstructions[watchSource] ?? sourceInstructions.apple_watch;
+
   return (
     <div className="space-y-4">
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-xs text-blue-300">
-        <strong>iOS 15+ :</strong> Apple ne permet plus d'importer des raccourcis depuis des fichiers externes. Il faut le créer manuellement une seule fois — environ 5 minutes.
-      </div>
 
+      {/* Sélecteur de source */}
       <div className="bg-surface-card rounded-2xl p-4">
-        <p className="text-xs text-slate-400 mb-2">
-          Ton identifiant — à coller dans l'en-tête <code className="bg-surface-muted px-1 rounded text-brand-300">x-user-id</code> à l'étape 5 :
-        </p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 bg-surface-muted rounded-lg px-3 py-2 text-xs text-slate-300 break-all">
-            {userId ?? "Chargement…"}
-          </code>
-          <button
-            onClick={onCopy}
-            className="px-3 py-2 bg-brand-500 rounded-lg text-xs font-semibold text-white whitespace-nowrap transition hover:bg-brand-600"
-          >
-            {copied ? "Copié ✓" : "Copier"}
-          </button>
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Ma montre</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {WATCH_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => onChangeSource(opt.key)}
+              className={`flex items-center gap-2 p-3 rounded-xl border text-left transition ${
+                watchSource === opt.key
+                  ? "border-brand-500 bg-brand-500/10 text-white"
+                  : "border-surface-muted text-slate-400 hover:border-slate-600"
+              }`}
+            >
+              <span className="text-lg shrink-0">{opt.icon}</span>
+              <span className="text-xs font-semibold">{opt.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="space-y-2">
-        {actions.map((a) => (
-          <div key={a.num} className="bg-surface-card rounded-xl p-4 flex gap-3">
-            <div className="flex flex-col items-center gap-1 shrink-0">
-              <span className="text-lg">{a.emoji}</span>
-              <span className="text-xs text-brand-400 font-bold">{a.num}</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white mb-1">{a.title}</p>
-              {a.detail && (
-                <p className="text-xs text-slate-400 whitespace-pre-line">{a.detail}</p>
-              )}
+      {/* Bannière source */}
+      {current.banner && (
+        <div className={`rounded-xl border p-4 text-xs ${current.banner.color}`}>
+          {current.banner.text}
+        </div>
+      )}
+
+      {/* Guide Raccourci (pas si source = none) */}
+      {current.steps && (
+        <>
+          <div className="bg-surface-card rounded-2xl p-4">
+            <p className="text-xs text-slate-400 mb-2">
+              Ton identifiant — à coller dans l'en-tête <code className="bg-surface-muted px-1 rounded text-brand-300">x-user-id</code> à l'étape 5 :
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-surface-muted rounded-lg px-3 py-2 text-xs text-slate-300 break-all">
+                {userId ?? "Chargement…"}
+              </code>
+              <button
+                onClick={onCopy}
+                className="px-3 py-2 bg-brand-500 rounded-lg text-xs font-semibold text-white whitespace-nowrap transition hover:bg-brand-600"
+              >
+                {copied ? "Copié ✓" : "Copier"}
+              </button>
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="bg-surface-card rounded-2xl p-4">
-        <p className="text-xs text-slate-400 mb-2 font-semibold">Corps JSON de référence (étape 5) :</p>
-        <pre className="bg-surface-muted rounded-lg p-3 text-xs text-slate-300 overflow-x-auto">{`{
+          <div className="space-y-2">
+            {current.steps.map((a) => (
+              <div key={a.num} className="bg-surface-card rounded-xl p-4 flex gap-3">
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                  <span className="text-lg">{a.emoji}</span>
+                  <span className="text-xs text-brand-400 font-bold">{a.num}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white mb-1">{a.title}</p>
+                  {a.detail && (
+                    <p className="text-xs text-slate-400 whitespace-pre-line">{a.detail}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-surface-card rounded-2xl p-4">
+            <p className="text-xs text-slate-400 mb-2 font-semibold">Corps JSON de référence (étape 5) :</p>
+            <pre className="bg-surface-muted rounded-lg p-3 text-xs text-slate-300 overflow-x-auto">{`{
   "date": "[Date formatée]",
   "resting_hr": [FC valeur],
   "hrv_rmssd": [HRV valeur],
   "active_calories": [Calories valeur]
 }`}</pre>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

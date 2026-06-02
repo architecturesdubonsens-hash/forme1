@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase";
 import BottomNav from "@/components/BottomNav";
 import HealthAlertModal from "@/components/HealthAlertModal";
+import { useWatchSource, WATCH_OPTIONS } from "@/lib/watchSource";
 
 const TYPE_LABELS: Record<string, { label: string; color: string; icon: string }> = {
   pain:       { label: "Douleur aiguë",    color: "text-red-400 bg-red-500/10 border-red-500/30",     icon: "⚡" },
@@ -20,6 +21,7 @@ export default function ProfilePage() {
   const [loading, setLoading]         = useState(true);
   const [showAlert, setShowAlert]     = useState(false);
   const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const [watchSource, setWatchSource] = useWatchSource();
   const router = useRouter();
 
   const load = async () => {
@@ -174,10 +176,38 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="mt-6 space-y-3">
+      {/* Sélection de la montre */}
+      <div className="mt-6 bg-surface-card rounded-2xl p-4">
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Ma montre</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {WATCH_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setWatchSource(opt.key)}
+              className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition ${
+                watchSource === opt.key
+                  ? "border-brand-500 bg-brand-500/10 text-white"
+                  : "border-surface-muted text-slate-400 hover:border-slate-600"
+              }`}
+            >
+              <span className="text-xl">{opt.icon}</span>
+              <span className="text-xs font-semibold">{opt.label}</span>
+              <span className="text-[10px] opacity-60 leading-tight">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => router.push("/wearable")}
+          className="mt-3 w-full py-2.5 border border-brand-500/40 rounded-xl text-brand-400 text-xs font-medium hover:bg-brand-500/5 transition"
+        >
+          Configurer la synchronisation →
+        </button>
+      </div>
+
+      <div className="mt-4 space-y-3">
         <button onClick={() => router.push("/wearable")}
           className="w-full py-3 border border-surface-muted rounded-xl text-slate-300 text-sm font-medium hover:bg-surface-card transition flex items-center justify-center gap-2">
-          ⌚ Connecter Apple Watch
+          ⌚ Connecter ma montre
         </button>
         <button onClick={() => router.push("/onboarding/assessment")}
           className="w-full py-3 border border-surface-muted rounded-xl text-slate-300 text-sm font-medium hover:bg-surface-card transition">
