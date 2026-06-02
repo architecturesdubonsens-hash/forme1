@@ -336,6 +336,26 @@ function SetupTab({
   watchSource: ReturnType<typeof useWatchSource>[0];
   onChangeSource: ReturnType<typeof useWatchSource>[1];
 }) {
+  const [scriptCopied, setScriptCopied] = useState(false);
+
+  const copyScript = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(
+        `/api/scriptable?user_id=${encodeURIComponent(userId)}&backend_url=${encodeURIComponent(backendUrl)}`
+      );
+      const code = await res.text();
+      await navigator.clipboard.writeText(code);
+      setScriptCopied(true);
+      setTimeout(() => setScriptCopied(false), 3000);
+    } catch {
+      // fallback : ouvrir dans un nouvel onglet
+      window.open(
+        `/api/scriptable?user_id=${encodeURIComponent(userId)}&backend_url=${encodeURIComponent(backendUrl)}`,
+        "_blank"
+      );
+    }
+  };
   const actions = [
     {
       num: 1,
@@ -494,23 +514,26 @@ function SetupTab({
               <h3 className="text-sm font-semibold text-white">Alternative : Scriptable (plus simple)</h3>
             </div>
             <p className="text-xs text-slate-400">
-              Scriptable est une app iOS gratuite. Au lieu de configurer l'étape 5 ci-dessus,
-              télécharge ce script pré-rempli — ton Raccourci n'a plus qu'à lire les données
-              Santé et les passer à Scriptable.
+              Scriptable est une app iOS gratuite. Copie le code ci-dessous, colle-le dans un
+              nouveau script Scriptable — tes identifiants sont déjà dedans.
             </p>
             {userId && (
-              <a
-                href={`/api/scriptable?user_id=${encodeURIComponent(userId)}&backend_url=${encodeURIComponent(backendUrl)}`}
-                download="Forme1-Sync.js"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-brand-500 hover:bg-brand-600 rounded-xl text-sm font-semibold text-white transition"
+              <button
+                onClick={copyScript}
+                className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition ${
+                  scriptCopied
+                    ? "bg-green-500/20 border border-green-500/40 text-green-400"
+                    : "bg-brand-500 hover:bg-brand-600 text-white"
+                }`}
               >
-                ⬇ Télécharger le script Scriptable
-              </a>
+                {scriptCopied ? "✓ Code copié !" : "Copier le code Scriptable"}
+              </button>
             )}
             <ol className="space-y-1.5 pt-1">
               {[
                 "Installe Scriptable (App Store, gratuit)",
-                "Télécharge le script ci-dessus → ouvre-le depuis l'app Fichiers → Scriptable l'importe",
+                "Appuie sur « Copier le code » ci-dessus",
+                "Ouvre Scriptable → + → colle le code → renomme le script « Forme1 Sync »",
                 "Dans Raccourcis : effectue les étapes 1–4 pour lire FC, HRV et Calories",
                 "À la place de l'étape 5, ajoute « Exécuter un script Scriptable » → Forme1 Sync → passe les données en entrée",
               ].map((text, i) => (
