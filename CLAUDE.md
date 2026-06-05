@@ -140,3 +140,32 @@ User → Profile → WeeklyPlan → Session → Exercise
 5. **Raccourci iOS** — créer et documenter le Raccourci Apple Watch → webhook
 6. **Moteur d'adaptation v1** — ajustement du programme sur la base du feedback et des données wearable
 7. **Polish UI** — design, animations légères, liens démo exercices
+
+---
+
+## Architecture multi-produits — CapInSitu / VIZinSITU / Générateur
+
+Ce dépôt héberge **deux produits distincts** qui partagent la même infrastructure Supabase CapInSitu (`fnfrusblyzndbzckkfir`). Ne jamais mélanger les données avec Forme1 (`ojoswtbarspntovtcfsh`).
+
+### Produits
+
+| Répertoire | Produit | Statut |
+|---|---|---|
+| `frontend/` | Forme1 — coaching sportif | Déployé Vercel |
+| `backend/` | Forme1 — API FastAPI | Déployé |
+| `generation/` | Générateur IA bâtiment | Backend Railway + frontend Vercel (`capinsitu-frontend/`) |
+| `capinsitu-frontend/` | Interface générateur | Next.js, déployé Vercel |
+
+### Relation Générateur ↔ CapInSitu
+
+**Principe directeur** : le générateur est développé comme module autonome aujourd'hui, mais **conçu dès le départ pour s'intégrer à CapInSitu** quand ce produit sera prêt.
+
+Concrètement, chaque décision d'architecture dans `generation/` doit respecter :
+
+1. **Un projet CapInSitu naîtra d'une session de génération validée** — quand le schéma fonctionnel est approuvé et le bâtiment généré, ces données alimenteront un projet CapInSitu (suivi, équipe, documents, maquette).
+2. **Le champ `capinsitu_project_id`** est réservé dans `generation_sessions` pour établir ce lien quand CapInSitu sera prêt.
+3. **L'API du générateur** (`/sessions/{id}`, `/sessions/{id}/generate`) est le contrat que CapInSitu consommera — ne pas casser la compatibilité sans versioning.
+4. **VIZinSITU** reçoit le GLB/IFC généré via `vizinsitu-connector.js` — ce connecteur est prioritaire dès que VIZinSITU expose son API.
+5. **Auth** : utiliser Supabase Auth du projet CapInSitu (`fnfrusblyzndbzckkfir`) pour les deux produits — un seul compte utilisateur, deux interfaces.
+
+Voir `generation/INTEGRATION.md` pour le détail du contrat d'interface.

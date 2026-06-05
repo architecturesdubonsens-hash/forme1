@@ -1,6 +1,14 @@
 """
-api-generate.py
-FastAPI backend — pipeline de génération bâtiment + bibliothèque typologique + sessions dialogue.
+api-generate.py — CapInSitu Générateur Bâtiment
+FastAPI backend : pipeline de génération bâtiment + bibliothèque typologique + sessions dialogue.
+
+Rôle dans l'architecture multi-produits :
+  Ce service est développé comme module autonome mais conçu pour s'intégrer à CapInSitu (app-v3).
+  Le point d'intégration principal : POST /sessions/{id}/lock produit un schéma fonctionnel validé
+  qui deviendra la source d'un projet CapInSitu. Le champ capinsitu_project_id dans generation_sessions
+  est réservé à ce lien. Voir generation/INTEGRATION.md pour le contrat complet.
+
+  Supabase projet : fnfrusblyzndbzckkfir (CapInSitu/VIZinSITU) — NE PAS utiliser ojoswtbarspntovtcfsh (Forme1).
 """
 
 import asyncio
