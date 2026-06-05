@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://generation.capinsitu.fr/schemas/programme-v1.json",
+  "title": "Programme Architectural",
+  "description": "Schéma de données du programme architectural — graphe enrichi espaces + liaisons",
+  "type": "object",
+  "required": ["espaces", "liaisons"],
+  "properties": {
+    "espaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Espace" }
+    },
+    "liaisons": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Liaison" }
+    },
+    "contraintes_globales": {
+      "$ref": "#/definitions/ContraintesGlobales"
+    },
+    "objectifs_conception": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "references_typologiques": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "version": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "source_cdc": { "type": "string" },
+        "confiance": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "definitions": {
+    "Espace": {
+      "type": "object",
+      "required": ["id", "nom", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "nom": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "sejour", "cuisine", "salle_a_manger", "chambre", "bureau",
+            "salle_de_bain", "wc", "dressing", "hall", "couloir", "entree",
+            "cellier", "buanderie", "garage", "cave", "grenier", "combles",
+            "terrasse", "balcon", "loggia", "jardin", "cour",
+            "salle_reunion", "open_space", "accueil", "archives", "local_technique",
+            "commerces", "restaurant", "salle_sport", "piscine", "sas",
+            "circulation_verticale", "palier", "cage_escalier", "ascenseur",
+            "autre"
+          ]
+        },
+        "quantite": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "surface_min_m2": { "type": "number", "minimum": 0 },
+            "surface_max_m2": { "type": "number", "minimum": 0 },
+            "surface_cible_m2": { "type": "number", "minimum": 0 },
+            "largeur_min_m": { "type": "number", "minimum": 0 },
+            "longueur_min_m": { "type": "number", "minimum": 0 },
+            "hauteur_sous_plafond_m": { "type": "number", "minimum": 2.0, "default": 2.5 }
+          }
+        },
+        "qualites": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/QualiteDeclarative" },
+          "uniqueItems": true
+        },
+        "contraintes_op": {
+          "$ref": "#/definitions/ContraintesOperationnelles"
+        },
+        "priorite": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 3,
+          "description": "1=indispensable, 5=souhaitable"
+        }
+      }
+    },
+    "QualiteDeclarative": {
+      "type": "string",
+      "enum": [
+        "lumineux", "sombre", "traversant", "aveugle",
+        "calme", "actif", "intime", "représentatif",
+        "flexible", "dédié", "ouvert", "cloisonné",
+        "accessible_pmr", "technique",
+        "naturel", "minéral", "chaud", "froid", "humide", "sec",
+        "haute_hauteur", "standard", "compressé",
+        "vue_extérieure", "vue_jardin", "vue_rue", "vue_cour",
+        "ventilé_naturellement", "climatisé",
+        "acoustiquement_isolé", "acoustiquement_ouvert",
+        "sécurisé", "public", "privé", "semi_privé"
+      ]
+    },
+    "ContraintesOperationnelles": {
+      "type": "object",
+      "description": "Paramètres algorithmiques dérivés des qualités déclaratives (niveau 2)",
+      "properties": {
+        "ensoleillement_min_heures": { "type": "number", "minimum": 0, "maximum": 12 },
+        "orientation_preferee": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["N","NE","E","SE","S","SW","W","NW"] }
+        },
+        "facade_preferee": { "type": "boolean" },
+        "position_preferee": {
+          "type": "string",
+          "enum": ["rdc", "etage", "sous_sol", "any"]
+        },
+        "isolation_acoustique_db": { "type": "number" },
+        "ventilation_naturelle": { "type": "boolean" },
+        "acces_pmr": { "type": "boolean" },
+        "hauteur_libre_min_m": { "type": "number" },
+        "ratio_vitrage_min": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ratio_vitrage_max": { "type": "number", "minimum": 0, "maximum": 1 },
+        "double_orientation": { "type": "boolean" },
+        "separation_circulation": { "type": "boolean" },
+        "acces_direct_exterieur": { "type": "boolean" }
+      }
+    },
+    "Liaison": {
+      "type": "object",
+      "required": ["source", "cible", "type", "obligation"],
+      "properties": {
+        "source": { "type": "string" },
+        "cible": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "directe",
+            "indirecte",
+            "proximite",
+            "separation_absolue",
+            "relation_visuelle",
+            "flux_physique",
+            "flux_acoustique"
+          ]
+        },
+        "obligation": {
+          "type": "string",
+          "enum": ["absolue", "forte", "optionnelle"]
+        },
+        "permeabilite": {
+          "type": "string",
+          "enum": ["porte", "baie_vitree", "ouverture_libre", "cloison", "mur_plein", "none"],
+          "default": "porte"
+        },
+        "description": { "type": "string" }
+      }
+    },
+    "ContraintesGlobales": {
+      "type": "object",
+      "properties": {
+        "emprise_max_m2": { "type": "number" },
+        "surface_plancher_max_m2": { "type": "number" },
+        "hauteur_max_m": { "type": "number" },
+        "niveaux_max": { "type": "integer", "minimum": 1 },
+        "implantation": {
+          "type": "object",
+          "properties": {
+            "retrait_voirie_m": { "type": "number" },
+            "retrait_limite_m": { "type": "number" },
+            "retrait_fond_m": { "type": "number" }
+          }
+        },
+        "plu": {
+          "type": "object",
+          "properties": {
+            "zone": { "type": "string" },
+            "cos": { "type": "number" },
+            "ces": { "type": "number" },
+            "emprise_sol_max_pct": { "type": "number" }
+          }
+        },
+        "pmr": {
+          "type": "boolean",
+          "description": "Accessibilité PMR obligatoire"
+        },
+        "re2020": {
+          "type": "boolean",
+          "description": "Conformité RE2020 requise"
+        },
+        "bbc": { "type": "boolean" },
+        "passif": { "type": "boolean" }
+      }
+    }
+  }
+}

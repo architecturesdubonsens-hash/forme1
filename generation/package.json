@@ -1,0 +1,20 @@
+{
+  "name": "generation-batiment",
+  "version": "1.0.0",
+  "description": "Générateur IA de bâtiments depuis cahier des charges",
+  "type": "module",
+  "main": "generator.js",
+  "scripts": {
+    "generate": "node generator.js",
+    "parse": "node cdc-parser.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
