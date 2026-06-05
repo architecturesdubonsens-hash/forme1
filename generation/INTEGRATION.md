@@ -2,8 +2,9 @@
 
 ## Contexte
 
-Le générateur bâtiment (`generation/`) est un module autonome développé en parallèle de CapInSitu (`app-v3`).
+Le générateur bâtiment (`generation/`) est un module autonome développé en parallèle de CapInSitu.
 Il est conçu pour être intégré à CapInSitu au fur et à mesure, sans refactoring majeur.
+CapInSitu est un codebase séparé (non présent dans ce dépôt).
 
 ## Principe de déploiement
 
