@@ -15,6 +15,9 @@ generation/.env
 node_modules/
 frontend/.next/
 frontend/out/
+capinsitu-frontend/.next/
+capinsitu-frontend/out/
+capinsitu-frontend/*.tsbuildinfo
 
 # OS
 .DS_Store
