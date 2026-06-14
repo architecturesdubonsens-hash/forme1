@@ -5,10 +5,11 @@ import { sessions } from '@/lib/api';
 import type { Session, HistoryEntry, Programme, Espace, LayoutData } from '@/lib/types';
 import ProgrammeViewer from '@/components/ProgrammeViewer';
 import SvgSchematic from '@/components/SvgSchematic';
+import Viewer3D from '@/components/Viewer3D';
 import {
   Send, Lock, Zap, Loader2, CheckCircle2, AlertCircle,
-  ChevronRight, ChevronDown, RotateCcw, Download, MousePointerClick,
-  LayoutGrid, List,
+  RotateCcw, Download, MousePointerClick,
+  LayoutGrid, List, Box,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -119,7 +120,7 @@ export default function SessionPage() {
   const [svgContent, setSvgContent] = useState('');
 
   // Panneau gauche
-  const [leftTab, setLeftTab]           = useState<'espaces' | 'schema'>('espaces');
+  const [leftTab, setLeftTab]           = useState<'espaces' | 'schema' | '3d'>('espaces');
   const [layoutData, setLayoutData]     = useState<LayoutData | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [selectedEspaceId, setSelectedEspaceId] = useState<string | undefined>();
@@ -386,55 +387,73 @@ export default function SessionPage() {
         {/* Tabs (espaces / schéma) — seulement si programme disponible */}
         {!isParsing && hasProgramme && (
           <>
+            {/* Onglets */}
             <div className="flex border-b border-border flex-shrink-0">
-              <button
-                onClick={() => setLeftTab('espaces')}
-                className={clsx(
-                  'flex-1 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors',
-                  leftTab === 'espaces'
-                    ? 'text-white border-b-2 border-accent'
-                    : 'text-muted hover:text-white/70'
-                )}
-              >
-                <List size={11} /> Espaces
-              </button>
-              <button
-                onClick={() => setLeftTab('schema')}
-                className={clsx(
-                  'flex-1 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors',
-                  leftTab === 'schema'
-                    ? 'text-white border-b-2 border-accent'
-                    : 'text-muted hover:text-white/70'
-                )}
-              >
-                <LayoutGrid size={11} /> Schéma
-                {layoutLoading && <Loader2 size={9} className="animate-spin" />}
-              </button>
+              {([
+                { id: 'espaces', label: 'Espaces', icon: <List size={10} /> },
+                { id: 'schema',  label: 'Schéma',  icon: <LayoutGrid size={10} />, loading: layoutLoading },
+                { id: '3d',      label: '3D',       icon: <Box size={10} />,        loading: layoutLoading && leftTab === '3d' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setLeftTab(tab.id)}
+                  className={clsx(
+                    'flex-1 py-2 flex items-center justify-center gap-1 text-[10px] font-semibold transition-colors',
+                    leftTab === tab.id
+                      ? 'text-white border-b-2 border-accent'
+                      : 'text-muted hover:text-white/70'
+                  )}
+                >
+                  {tab.icon} {tab.label}
+                  {'loading' in tab && tab.loading && <Loader2 size={8} className="animate-spin ml-0.5" />}
+                </button>
+              ))}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
+            {/* Contenu onglet — overflow scrollable sauf 3D */}
+            <div className={clsx('flex-1 min-h-0', leftTab === '3d' ? '' : 'overflow-y-auto')}>
               {leftTab === 'espaces' && (
-                <ProgrammeViewer
-                  programme={session.programme!}
-                  compact
-                  onSelectEspace={isLocked ? undefined : handleSelectEspace}
-                  selectedEspaceId={selectedEspaceId}
-                />
+                <div className="p-3">
+                  <ProgrammeViewer
+                    programme={session.programme!}
+                    compact
+                    onSelectEspace={isLocked ? undefined : handleSelectEspace}
+                    selectedEspaceId={selectedEspaceId}
+                  />
+                </div>
               )}
+
               {leftTab === 'schema' && (
+                <div className="p-3">
+                  {layoutData
+                    ? <SvgSchematic
+                        layout={layoutData}
+                        selectedEspaceId={selectedEspaceId}
+                        onSelectEspace={isLocked ? undefined : handleSelectEspaceFromSvg}
+                      />
+                    : layoutLoading
+                      ? <div className="flex items-center justify-center py-12 gap-2 text-muted text-xs">
+                          <Loader2 size={14} className="animate-spin" /> Calcul du schéma…
+                        </div>
+                      : <p className="text-center py-12 text-muted text-xs">Schéma non disponible</p>
+                  }
+                </div>
+              )}
+
+              {leftTab === '3d' && (
                 layoutData
-                  ? <SvgSchematic
+                  ? <Viewer3D
                       layout={layoutData}
                       selectedEspaceId={selectedEspaceId}
                       onSelectEspace={isLocked ? undefined : handleSelectEspaceFromSvg}
                     />
                   : layoutLoading
-                    ? <div className="flex items-center justify-center py-12 gap-2 text-muted text-xs">
+                    ? <div className="flex items-center justify-center h-full gap-2 text-muted text-xs">
                         <Loader2 size={14} className="animate-spin" /> Calcul du schéma…
                       </div>
-                    : <div className="text-center py-12 text-muted text-xs">
+                    : <p className="flex items-center justify-center h-full text-muted text-xs">
                         Schéma non disponible
-                      </div>
+                      </p>
               )}
             </div>
           </>
