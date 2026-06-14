@@ -9,6 +9,58 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
+// -------------------------------------------------------
+// OPENROUTER — client générique pour modèles non-Claude
+// -------------------------------------------------------
+
+function convertToolToOpenAI(tool) {
+  return {
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.input_schema
+    }
+  };
+}
+
+async function callOpenRouter(model, systemPrompt, userMessage, tools) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY requis pour les modèles non-Claude (ex: DeepSeek)');
+
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://capinsitu.fr',
+      'X-Title': 'CapInSitu Generator'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userMessage }
+      ],
+      tools: tools.map(convertToolToOpenAI),
+      tool_choice: 'required'
+    })
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`OpenRouter ${res.status}: ${body}`);
+  }
+
+  const data = await res.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall || toolCall.function?.name !== 'apply_programme_edits') {
+    throw new Error('Commande non interprétée par le modèle (OpenRouter)');
+  }
+
+  return JSON.parse(toolCall.function.arguments);
+}
+
 function getSupabaseClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
@@ -273,12 +325,12 @@ export async function applyCommand(programme, command, options = {}) {
     apiKey    = process.env.ANTHROPIC_API_KEY,
     // Haiku 4.5 par défaut : opérations atomiques NL→JSON, mode standard (pas de thinking)
     // Benchmarks : CoT dégrade l'instruction following de 10-30% (arxiv 2505.11423)
-    // Surcharger via DIALOGUE_MODEL=claude-sonnet-4-6 si commandes très complexes
+    // Alternatives via DIALOGUE_MODEL :
+    //   claude-sonnet-4-6              → commandes complexes, même provider
+    //   deepseek/deepseek-v4-flash     → -86% coût, nécessite OPENROUTER_API_KEY
     model     = process.env.DIALOGUE_MODEL || 'claude-haiku-4-5-20251001',
     maxTokens = 3000
   } = options;
-
-  const client = new Anthropic({ apiKey });
 
   const programmeSummary = {
     espaces: (programme.espaces || []).map(e => ({
@@ -297,31 +349,37 @@ export async function applyCommand(programme, command, options = {}) {
     contraintes_globales: programme.contraintes_globales
   };
 
-  const response = await client.messages.create({
-    model,
-    max_tokens: maxTokens,
-    system: SYSTEM_DIALOGUE,
-    tools: [EDIT_TOOL],
-    tool_choice: { type: 'any' },
-    messages: [{
-      role: 'user',
-      content: `Programme actuel :
+  const userMessage = `Programme actuel :
 \`\`\`json
 ${JSON.stringify(programmeSummary, null, 2)}
 \`\`\`
 
 Commande de modification : "${command}"
 
-Applique cette modification en utilisant l'outil.`
-    }]
-  });
+Applique cette modification en utilisant l'outil.`;
 
-  const toolUse = response.content.find(b => b.type === 'tool_use');
-  if (!toolUse || toolUse.name !== 'apply_programme_edits') {
-    throw new Error('Commande non interprétée par Claude');
+  let toolInput;
+
+  if (model.startsWith('claude-')) {
+    const client = new Anthropic({ apiKey });
+    const response = await client.messages.create({
+      model,
+      max_tokens: maxTokens,
+      system: SYSTEM_DIALOGUE,
+      tools: [EDIT_TOOL],
+      tool_choice: { type: 'any' },
+      messages: [{ role: 'user', content: userMessage }]
+    });
+    const toolUse = response.content.find(b => b.type === 'tool_use');
+    if (!toolUse || toolUse.name !== 'apply_programme_edits') {
+      throw new Error('Commande non interprétée par Claude');
+    }
+    toolInput = toolUse.input;
+  } else {
+    toolInput = await callOpenRouter(model, SYSTEM_DIALOGUE, userMessage, [EDIT_TOOL]);
   }
 
-  const { operations, reasoning } = toolUse.input;
+  const { operations, reasoning } = toolInput;
   const { programme: updated, applied, errors } = applyOperations(programme, operations);
   const diff = buildDiffSummary(programme, updated, applied);
 
