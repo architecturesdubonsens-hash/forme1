@@ -42,6 +42,7 @@ GENERATOR_JS   = GEN_DIR / "generator.js"
 PLAN_ANALYZER  = GEN_DIR / "plan-analyzer.js"
 DIALOGUE_ENG   = GEN_DIR / "dialogue-engine.js"
 TYPO_LIB       = GEN_DIR / "typo-library.js"
+CDC_PARSER     = GEN_DIR / "cdc-parser.js"
 
 OUTPUT_DIR = Path(os.environ.get("GENERATION_OUTPUT_DIR", "/tmp/generation-output"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -446,8 +447,43 @@ console.log('{{}}');
 # SESSIONS DE CONCEPTION
 # ===================================================================
 
+async def _parse_cdc_background(session_id: str, cdc_texte: str):
+    """Parse le CdC en arrière-plan et met à jour la session."""
+    runner = f"""
+import {{ parseCahierDesCharges, extraireQuestionsClarification }} from '{CDC_PARSER}';
+import {{ updateSessionProgramme, appendHistory }} from '{DIALOGUE_ENG}';
+import {{ readFileSync }} from 'fs';
+const {{ sessionId, cdcTexte }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+try {{
+  const programme = await parseCahierDesCharges(cdcTexte);
+  const questions = extraireQuestionsClarification(programme);
+  programme.metadata = programme.metadata || {{}};
+  programme.metadata.questions_clarification = questions;
+  await updateSessionProgramme(sessionId, programme, {{ status: 'functional_schema' }});
+  await appendHistory(sessionId, 'cdc_parse', null, null, programme, {{
+    confiance: programme.metadata.confiance,
+    nb_espaces: programme.espaces?.length,
+    questions_clarification: questions
+  }});
+  console.log(JSON.stringify({{ ok: true }}));
+}} catch(e) {{
+  await updateSessionProgramme(sessionId, {{}}, {{ status: 'erreur' }});
+  console.log(JSON.stringify({{ ok: false, error: e.message }}));
+}}
+"""
+    try:
+        await _run_node(runner, {"sessionId": session_id, "cdcTexte": cdc_texte}, timeout=120)
+    except Exception as e:
+        print(f"[parse_cdc_background] Erreur session {session_id}: {e}")
+
+
 @app.post("/sessions", status_code=201)
-async def create_session(request: CreateSessionRequest):
+async def create_session(request: CreateSessionRequest, background_tasks: BackgroundTasks):
+    has_cdc     = bool(request.cdc_texte and request.cdc_texte.strip())
+    has_prog    = bool((request.programme or {}).get('espaces'))
+    needs_parse = has_cdc and not has_prog
+    initial_status = 'parsing' if needs_parse else 'functional_schema'
+
     runner = f"""
 import {{ createSession }} from '{DIALOGUE_ENG}';
 import {{ readFileSync }} from 'fs';
@@ -459,8 +495,13 @@ console.log(JSON.stringify(result));
         "user_id": request.user_id, "project_name": request.project_name,
         "cdc_texte": request.cdc_texte, "guide_answers": request.guide_answers,
         "programme": request.programme, "location": request.location,
-        "emprise": request.emprise, "plu": request.plu, "template_ids": request.template_ids
+        "emprise": request.emprise, "plu": request.plu, "template_ids": request.template_ids,
+        "status": initial_status
     }, timeout=15)
+
+    if needs_parse:
+        background_tasks.add_task(_parse_cdc_background, result["id"], request.cdc_texte)
+
     return JSONResponse(content=result, status_code=201)
 
 

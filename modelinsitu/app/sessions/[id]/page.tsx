@@ -17,11 +17,15 @@ interface ChatMessage {
 }
 
 const STATUS_LABELS: Record<string, string> = {
+  parsing: 'Analyse CdC…',
   brouillon: 'Brouillon',
+  functional_schema: 'Schéma fonctionnel',
   schema_fonctionnel: 'Schéma fonctionnel',
   schema_valide: 'Schéma validé',
+  schema_locked: 'Schéma verrouillé',
   generation_en_cours: 'Génération…',
   genere: 'Généré',
+  done: 'Généré',
   erreur: 'Erreur',
   archive: 'Archivé',
 };
@@ -53,18 +57,34 @@ export default function SessionPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  async function load() {
+  async function load(silent = false) {
     try {
       const s = await sessions.get(id);
       setSession(s);
-      if (s.programme && messages.length === 0) {
-        setMessages([{
-          role: 'assistant',
-          content: `Programme généré depuis le cahier des charges.\n${s.programme.espaces?.length ?? 0} espaces · ${s.programme.liaisons?.length ?? 0} liaisons · ~${s.programme.surface_totale_estimee ?? '?'} m²\n\nVous pouvez affiner le schéma en dialogue, puis valider pour lancer la génération.`,
-          timestamp: new Date(s.created_at),
-        }]);
+
+      // Premier chargement : message d'accueil selon état
+      if (!silent && messages.length === 0) {
+        if (s.status === 'parsing') {
+          setMessages([{
+            role: 'assistant',
+            content: 'Analyse du cahier des charges en cours… Je génère le programme spatial.',
+            timestamp: new Date(s.created_at),
+          }]);
+        } else if (s.programme?.espaces?.length > 0) {
+          const nb = s.programme.espaces.length;
+          const nl = s.programme.liaisons?.length ?? 0;
+          const surf = s.programme.espaces.reduce((t: number, e: {dimensions?: {surface_cible_m2?: number}}) => t + (e.dimensions?.surface_cible_m2 ?? 0), 0);
+          const conf = s.programme.metadata?.confiance;
+          const questions: string[] = s.programme.metadata?.questions_clarification ?? [];
+          let msg = `Programme extrait du cahier des charges.\n${nb} espaces · ${nl} liaisons · ~${Math.round(surf)} m²${conf ? ` · confiance ${Math.round(conf * 100)}%` : ''}\n\nVous pouvez affiner en dialogue, puis valider pour lancer la génération.`;
+          if (questions.length > 0) {
+            msg += `\n\n**Questions de clarification :**\n${questions.slice(0, 4).map(q => `• ${q}`).join('\n')}`;
+          }
+          setMessages([{ role: 'assistant', content: msg, timestamp: new Date(s.created_at) }]);
+        }
       }
-      if (s.status === 'genere') {
+
+      if (s.status === 'genere' || s.status === 'done') {
         const { svg } = await sessions.svg(id);
         setSvgContent(svg);
       }
@@ -74,6 +94,33 @@ export default function SessionPage() {
       setLoading(false);
     }
   }
+
+  // Polling quand le CdC est en cours d'analyse
+  useEffect(() => {
+    if (session?.status !== 'parsing') return;
+    const timer = setInterval(async () => {
+      try {
+        const s = await sessions.get(id);
+        if (s.status !== 'parsing') {
+          setSession(s);
+          clearInterval(timer);
+          const nb = s.programme?.espaces?.length ?? 0;
+          const nl = s.programme?.liaisons?.length ?? 0;
+          const surf = (s.programme?.espaces ?? []).reduce((t: number, e: {dimensions?: {surface_cible_m2?: number}}) => t + (e.dimensions?.surface_cible_m2 ?? 0), 0);
+          const conf = s.programme?.metadata?.confiance;
+          const questions: string[] = s.programme?.metadata?.questions_clarification ?? [];
+          let msg = s.status === 'erreur'
+            ? 'Erreur lors de l\'analyse du cahier des charges. Essayez de saisir une commande pour démarrer manuellement.'
+            : `Programme généré — ${nb} espaces · ${nl} liaisons · ~${Math.round(surf)} m²${conf ? ` · confiance ${Math.round(conf * 100)}%` : ''}\n\nVous pouvez affiner en dialogue, puis valider pour lancer la génération.`;
+          if (s.status !== 'erreur' && questions.length > 0) {
+            msg += `\n\n**Questions de clarification :**\n${questions.slice(0, 4).map((q: string) => `• ${q}`).join('\n')}`;
+          }
+          setMessages(m => [...m, { role: 'assistant', content: msg, timestamp: new Date() }]);
+        }
+      } catch { /* silencieux */ }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [session?.status, id]);
 
   useEffect(() => { load(); }, [id]);
 
@@ -157,9 +204,10 @@ export default function SessionPage() {
     }
   }
 
-  const isLocked = session?.status === 'schema_valide' || session?.status === 'genere' || session?.status === 'generation_en_cours';
-  const canGenerate = session?.status === 'schema_valide';
-  const isGenerated = session?.status === 'genere';
+  const isParsing  = session?.status === 'parsing';
+  const isLocked   = ['schema_valide', 'schema_locked', 'genere', 'done', 'generation_en_cours'].includes(session?.status ?? '');
+  const canGenerate = session?.status === 'schema_valide' || session?.status === 'schema_locked';
+  const isGenerated = session?.status === 'genere' || session?.status === 'done';
 
   if (loading) {
     return (
@@ -207,7 +255,15 @@ export default function SessionPage() {
           </span>
         </div>
 
-        {programmeOpen && session.programme && (
+        {isParsing && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <Loader2 size={28} className="animate-spin text-accent" />
+            <p className="text-sm text-white font-medium">Analyse du cahier des charges</p>
+            <p className="text-xs text-muted">L&apos;IA extrait le programme spatial…</p>
+          </div>
+        )}
+
+        {!isParsing && programmeOpen && session.programme && (
           <div className="flex-1 overflow-y-auto p-4">
             <ProgrammeViewer programme={session.programme} compact />
           </div>
@@ -317,7 +373,7 @@ export default function SessionPage() {
         </div>
 
         {/* Suggestions */}
-        {!isLocked && (
+        {!isLocked && !isParsing && (
           <div className="px-4 pb-2 flex gap-2 overflow-x-auto flex-shrink-0">
             {SUGGESTIONS.slice(0, 4).map(s => (
               <button
@@ -333,7 +389,12 @@ export default function SessionPage() {
 
         {/* Input */}
         <div className="p-4 border-t border-border flex-shrink-0">
-          {isLocked ? (
+          {isParsing ? (
+            <div className="text-center text-muted text-sm py-3 bg-surface rounded-xl border border-border">
+              <Loader2 size={14} className="inline mr-2 animate-spin" />
+              Analyse en cours — dialogue disponible dans quelques secondes
+            </div>
+          ) : isLocked ? (
             <div className="text-center text-muted text-sm py-3 bg-surface rounded-xl border border-border">
               <Lock size={14} className="inline mr-1" />
               Schéma verrouillé — {canGenerate ? 'lancez la génération →' : 'génération en cours ou terminée'}

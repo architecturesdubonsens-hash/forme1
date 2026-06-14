@@ -396,7 +396,7 @@ Applique cette modification en utilisant l'outil.`;
 // SESSION CRUD (Supabase)
 // -------------------------------------------------------
 
-export async function createSession({ user_id, project_name, cdc_texte, guide_answers, programme, location, emprise, plu, template_ids }) {
+export async function createSession({ user_id, project_name, cdc_texte, guide_answers, programme, location, emprise, plu, template_ids, status }) {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('generation_sessions')
@@ -410,7 +410,7 @@ export async function createSession({ user_id, project_name, cdc_texte, guide_an
       emprise:      emprise   || { largeur: 20, profondeur: 15 },
       plu:          plu       || {},
       template_ids: template_ids || [],
-      status:       'functional_schema',
+      status:       status || 'functional_schema',
       phase:        1
     })
     .select()
