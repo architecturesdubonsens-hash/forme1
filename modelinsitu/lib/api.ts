@@ -56,7 +56,15 @@ export const analysis = {
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 export const sessions = {
-  create(data: { project_name: string; cdc_texte?: string; user_id?: string }): Promise<Session> {
+  create(data: {
+    project_name: string;
+    cdc_texte?: string;
+    user_id?: string;
+    location?: { lat: number; lng: number };
+    emprise?: { largeur: number; profondeur: number };
+    plu?: Record<string, string | number>;
+    adresse?: string;
+  }): Promise<Session> {
     return req('/sessions', { method: 'POST', body: JSON.stringify(data) });
   },
   list(userId?: string): Promise<Session[]> {
