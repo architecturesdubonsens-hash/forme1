@@ -1,6 +1,6 @@
 # ============================================================
-# CapInSitu Generation Backend
-# Python 3.11 + Node.js 20 + ifcopenshell
+# ModelInSitu Generation Backend
+# Python 3.11 + Node.js 20
 # ============================================================
 FROM python:3.11-slim
 
@@ -9,12 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gnupg \
     ca-certificates \
-    # ifcopenshell (moteur géométrique Open CASCADE)
     libglu1-mesa \
     libgl1 \
     libgomp1 \
-    libxrender1 \
-    libxi6 \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Node.js 20 ---
