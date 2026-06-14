@@ -1,24 +1,84 @@
+export interface EspaceDimensions {
+  surface_min_m2?: number;
+  surface_max_m2?: number;
+  surface_cible_m2?: number;
+  largeur_min_m?: number;
+  longueur_min_m?: number;
+  hauteur_sous_plafond_m?: number;
+}
+
+export interface ContraintesOp {
+  ensoleillement_min_heures?: number;
+  orientation_preferee?: string[];
+  facade_preferee?: boolean;
+  position_preferee?: 'rdc' | 'etage' | 'sous_sol' | 'any';
+  isolation_acoustique_db?: number;
+  ventilation_naturelle?: boolean;
+  acces_pmr?: boolean;
+  hauteur_libre_min_m?: number;
+  ratio_vitrage_min?: number;
+  ratio_vitrage_max?: number;
+  double_orientation?: boolean;
+  separation_circulation?: boolean;
+  acces_direct_exterieur?: boolean;
+}
+
 export interface Espace {
   id: string;
   nom: string;
   type: string;
+  quantite?: number;
   niveau?: string;
-  surface_estimee_m2?: number;
+  dimensions?: EspaceDimensions;
   qualites?: string[];
+  contraintes_op?: ContraintesOp;
   contacts_exterieurs?: string[];
+  priorite?: number;
+  surface_estimee_m2?: number; // legacy compat
 }
 
 export interface Liaison {
-  id: string;
-  espace_a: string;
-  espace_b: string;
-  type: 'directe' | 'couloir' | 'visuelle' | 'acoustique' | 'fonctionnelle';
+  // schema cdc-parser (source/cible)
+  source?: string;
+  cible?: string;
+  // schema legacy (espace_a/espace_b)
+  id?: string;
+  espace_a?: string;
+  espace_b?: string;
+  type: string;
+  obligation?: 'absolue' | 'forte' | 'optionnelle';
+  permeabilite?: string;
+  description?: string;
   qualite?: string;
+}
+
+export interface ProgrammeMetadata {
+  version?: string;
+  created_at?: string;
+  source_cdc?: string;
+  confiance?: number;
+  valide?: boolean;
+  questions_clarification?: string[];
+  erreurs_validation?: string[];
+}
+
+export interface ContraintesGlobales {
+  emprise_max_m2?: number;
+  surface_plancher_max_m2?: number;
+  hauteur_max_m?: number;
+  niveaux_max?: number;
+  pmr?: boolean;
+  re2020?: boolean;
+  bbc?: boolean;
+  passif?: boolean;
 }
 
 export interface Programme {
   espaces: Espace[];
   liaisons: Liaison[];
+  contraintes_globales?: ContraintesGlobales;
+  objectifs_conception?: string[];
+  references_typologiques?: string[];
   contacts_exterieurs?: Record<string, string[]>;
   circulation?: {
     entrees?: string[];
@@ -27,6 +87,7 @@ export interface Programme {
   };
   niveaux?: string[];
   surface_totale_estimee?: number;
+  metadata?: ProgrammeMetadata;
 }
 
 export interface TemplateStats {
@@ -67,8 +128,19 @@ export interface Session {
   id: string;
   user_id?: string;
   project_name: string;
-  status: 'brouillon' | 'schema_fonctionnel' | 'schema_valide' | 'generation_en_cours' | 'genere' | 'erreur' | 'archive';
-  phase: 1 | 2 | 3;
+  status:
+    | 'parsing'
+    | 'brouillon'
+    | 'functional_schema'
+    | 'schema_fonctionnel'
+    | 'schema_valide'
+    | 'schema_locked'
+    | 'generation_en_cours'
+    | 'genere'
+    | 'done'
+    | 'erreur'
+    | 'archive';
+  phase?: 1 | 2 | 3;
   cdc_texte?: string;
   programme?: Programme;
   generation_result?: GenerationResult;

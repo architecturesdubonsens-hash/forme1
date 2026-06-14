@@ -84,7 +84,7 @@ export default function SessionsPage() {
                     <Clock size={10} /> {timeAgo(s.updated_at)}
                   </span>
                   <span className="text-xs text-muted">
-                    Phase {s.phase} — {PHASE_LABELS[s.phase] || ''}
+                    {s.phase ? `Phase ${s.phase} — ${PHASE_LABELS[s.phase] || ''}` : ''}
                   </span>
                 </div>
               </div>
