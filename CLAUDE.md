@@ -153,8 +153,8 @@ Ce dépôt héberge **deux produits distincts** qui partagent la même infrastru
 |---|---|---|
 | `frontend/` | Forme1 — coaching sportif | Déployé Vercel |
 | `backend/` | Forme1 — API FastAPI | Déployé |
-| `generation/` | Générateur IA bâtiment | Backend Railway + frontend Vercel (`capinsitu-frontend/`) |
-| `capinsitu-frontend/` | Interface générateur | Next.js, déployé Vercel |
+| `generation/` | Générateur IA bâtiment | Backend Railway + frontend Vercel (`modelinsitu/`) |
+| `modelinsitu/` | ModelInSitu — interface générateur | Next.js, déployé Vercel |
 
 ### Relation Générateur ↔ CapInSitu
 
