@@ -1,5 +1,5 @@
 import type {
-  Template, Session, AnalysisJob, Programme, CommandResult, HistoryEntry,
+  Template, Session, AnalysisJob, Programme, CommandResult, HistoryEntry, LayoutData,
 } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -87,6 +87,9 @@ export const sessions = {
       method: 'POST',
       body: JSON.stringify(styleRefs ? { style_refs: styleRefs } : {}),
     });
+  },
+  layout(id: string): Promise<LayoutData> {
+    return req(`/sessions/${id}/layout`);
   },
   svg(id: string): Promise<{ svg: string }> {
     return req(`/sessions/${id}/svg`);

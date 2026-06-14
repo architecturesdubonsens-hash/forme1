@@ -616,6 +616,27 @@ console.log(JSON.stringify(result));
             "message": f"Génération démarrée — GET /generate/{job_id}"}
 
 
+@app.get("/sessions/{session_id}/layout")
+async def get_session_layout(session_id: str):
+    layout_engine = GEN_DIR / "layout-engine.js"
+    runner = f"""
+import {{ getSession }} from '{DIALOGUE_ENG}';
+import {{ resolveLayout }} from '{layout_engine}';
+import {{ readFileSync }} from 'fs';
+const {{ id }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+const session = await getSession(id);
+const programme = session.programme;
+if (!programme?.espaces?.length) throw new Error('Programme non disponible');
+const emprise = session.emprise || {{ largeur: 20, profondeur: 15 }};
+const layout = resolveLayout(programme, emprise);
+console.log(JSON.stringify(layout));
+"""
+    result = await _run_node(runner, {"id": session_id}, timeout=30)
+    if "error" in result:
+        raise HTTPException(404, result["error"])
+    return JSONResponse(content=result)
+
+
 @app.get("/sessions/{session_id}/svg")
 async def get_session_svg(session_id: str):
     job = next((j for j in reversed(list(JOBS.values()))

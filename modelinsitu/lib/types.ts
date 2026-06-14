@@ -90,6 +90,32 @@ export interface Programme {
   metadata?: ProgrammeMetadata;
 }
 
+// ── Layout engine output ──────────────────────────────────────────────────────
+
+export interface LayoutRect {
+  id: string;
+  nom: string;
+  type: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  surface_m2: number;
+}
+
+export interface LayoutViolation {
+  type: string;
+  message: string;
+}
+
+export interface LayoutData {
+  rectangles: Record<string, LayoutRect[]>;
+  niveaux: string[];
+  emprise: { largeur: number; profondeur: number };
+  score: number;
+  violations: LayoutViolation[];
+}
+
 export interface TemplateStats {
   nb_espaces: number;
   surface_totale: number;

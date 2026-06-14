@@ -2,11 +2,13 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { sessions } from '@/lib/api';
-import type { Session, HistoryEntry, Programme, Espace } from '@/lib/types';
+import type { Session, HistoryEntry, Programme, Espace, LayoutData } from '@/lib/types';
 import ProgrammeViewer from '@/components/ProgrammeViewer';
+import SvgSchematic from '@/components/SvgSchematic';
 import {
   Send, Lock, Zap, Loader2, CheckCircle2, AlertCircle,
   ChevronRight, ChevronDown, RotateCcw, Download, MousePointerClick,
+  LayoutGrid, List,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -17,20 +19,20 @@ interface ChatMessage {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  parsing:              'Analyse CdC…',
-  brouillon:            'Brouillon',
-  functional_schema:    'Schéma fonctionnel',
-  schema_fonctionnel:   'Schéma fonctionnel',
-  schema_valide:        'Schéma validé',
-  schema_locked:        'Schéma verrouillé',
-  generation_en_cours:  'Génération…',
-  genere:               'Généré',
-  done:                 'Généré',
-  erreur:               'Erreur',
-  archive:              'Archivé',
+  parsing:             'Analyse CdC…',
+  brouillon:           'Brouillon',
+  functional_schema:   'Schéma fonctionnel',
+  schema_fonctionnel:  'Schéma fonctionnel',
+  schema_valide:       'Schéma validé',
+  schema_locked:       'Schéma verrouillé',
+  generation_en_cours: 'Génération…',
+  genere:              'Généré',
+  done:                'Généré',
+  erreur:              'Erreur',
+  archive:             'Archivé',
 };
 
-// ── Suggestions dynamiques tirées du programme réel ──────────────────────────
+// ── Suggestions dynamiques tirées des espaces réels ──────────────────────────
 function buildSuggestions(programme: Programme | undefined | null): string[] {
   if (!programme?.espaces?.length) {
     return [
@@ -40,12 +42,10 @@ function buildSuggestions(programme: Programme | undefined | null): string[] {
       'Déplace le séjour en façade sud',
     ];
   }
-
   const espaces = programme.espaces;
   const liaisons = programme.liaisons ?? [];
   const suggestions: string[] = [];
 
-  // Surface +20% arrondie à 5 sur le premier espace avec surface cible
   const avecSurf = espaces.filter(e => e.dimensions?.surface_cible_m2);
   if (avecSurf.length > 0) {
     const e = avecSurf[0];
@@ -53,7 +53,6 @@ function buildSuggestions(programme: Programme | undefined | null): string[] {
     suggestions.push(`Augmente "${e.nom}" à ${target} m²`);
   }
 
-  // Pair non encore liée
   const linked = new Set(liaisons.flatMap(l => [
     `${l.source ?? l.espace_a}-${l.cible ?? l.espace_b}`,
     `${l.cible ?? l.espace_b}-${l.source ?? l.espace_a}`,
@@ -68,51 +67,44 @@ function buildSuggestions(programme: Programme | undefined | null): string[] {
     }
   }
 
-  // Dernier espace sans niveau → proposer étage
   const sansniveau = espaces.filter(e => !e.niveau || e.niveau === 'rdc');
   if (sansniveau.length > 2) {
     suggestions.push(`Déplace "${sansniveau[sansniveau.length - 1].nom}" à l'étage`);
   }
-
-  // Complément générique
   if (suggestions.length < 4) suggestions.push('Ajoute une terrasse orientée sud');
   if (suggestions.length < 4) suggestions.push('Ajoute une chambre supplémentaire de 14 m²');
-  if (suggestions.length < 4) suggestions.push('Crée un accès PMR depuis l\'entrée');
-
+  if (suggestions.length < 4) suggestions.push("Crée un accès PMR depuis l'entrée");
   return suggestions.slice(0, 4);
 }
 
-// ── Rendu markdown minimal (sans dangerouslySetInnerHTML) ────────────────────
+// ── Rendu markdown minimal sans dangerouslySetInnerHTML ─────────────────────
 function MdContent({ text }: { text: string }) {
-  const paragraphs = text.split(/\n\n+/);
   return (
     <div className="space-y-2">
-      {paragraphs.map((para, pi) => {
-        const lines = para.split('\n');
-        return (
-          <div key={pi}>
-            {lines.map((line, li) => {
-              const isBullet = line.startsWith('• ') || line.startsWith('- ');
-              const content  = isBullet ? line.slice(2) : line;
-              if (!content.trim()) return null;
-              const parts = content.split(/(\*\*[^*]+\*\*)/g);
-              return (
-                <p key={li} className={clsx('leading-snug', isBullet && 'pl-3 relative before:absolute before:left-0 before:content-["•"] before:text-accent/50')}>
-                  {parts.map((p, k) =>
-                    p.startsWith('**') && p.endsWith('**')
-                      ? <strong key={k} className="text-white font-semibold">{p.slice(2, -2)}</strong>
-                      : p
-                  )}
-                </p>
-              );
-            })}
-          </div>
-        );
-      })}
+      {text.split(/\n\n+/).map((para, pi) => (
+        <div key={pi}>
+          {para.split('\n').map((line, li) => {
+            const isBullet = line.startsWith('• ') || line.startsWith('- ');
+            const content  = isBullet ? line.slice(2) : line;
+            if (!content.trim()) return null;
+            const parts = content.split(/(\*\*[^*]+\*\*)/g);
+            return (
+              <p key={li} className={clsx('leading-snug', isBullet && 'pl-3 relative before:absolute before:left-0 before:content-["•"] before:text-accent/50')}>
+                {parts.map((p, k) =>
+                  p.startsWith('**') && p.endsWith('**')
+                    ? <strong key={k} className="text-white font-semibold">{p.slice(2, -2)}</strong>
+                    : p
+                )}
+              </p>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
 
+// ── Composant principal ──────────────────────────────────────────────────────
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<(Session & { history: HistoryEntry[] }) | null>(null);
@@ -125,11 +117,25 @@ export default function SessionPage() {
   const [locking, setLocking]   = useState(false);
   const [generating, setGenerating] = useState(false);
   const [svgContent, setSvgContent] = useState('');
-  const [programmeOpen, setProgrammeOpen] = useState(true);
+
+  // Panneau gauche
+  const [leftTab, setLeftTab]           = useState<'espaces' | 'schema'>('espaces');
+  const [layoutData, setLayoutData]     = useState<LayoutData | null>(null);
+  const [layoutLoading, setLayoutLoading] = useState(false);
   const [selectedEspaceId, setSelectedEspaceId] = useState<string | undefined>();
 
-  const inputRef      = useRef<HTMLTextAreaElement>(null);
+  const inputRef       = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ── Chargement du layout (fonctionnel, pas la génération complète) ──────
+  const fetchLayout = useCallback(async () => {
+    setLayoutLoading(true);
+    try {
+      const data = await sessions.layout(id);
+      setLayoutData(data);
+    } catch { /* silencieux — layout indisponible */ }
+    finally { setLayoutLoading(false); }
+  }, [id]);
 
   async function load(silent = false) {
     try {
@@ -149,7 +155,6 @@ export default function SessionPage() {
           const surf = s.programme.espaces.reduce((t, e) => t + (e.dimensions?.surface_cible_m2 ?? 0), 0);
           const conf = s.programme.metadata?.confiance;
           const questions = s.programme.metadata?.questions_clarification ?? [];
-
           let msg = `**Programme extrait du cahier des charges.**\n${nb} espaces · ${nl} liaisons · ~${Math.round(surf)} m²${conf !== undefined ? ` · confiance ${Math.round(conf * 100)} %` : ''}\n\nVous pouvez affiner en dialogue naturel, puis valider pour lancer la génération.`;
           if (questions.length > 0) {
             msg += `\n\n**Questions de clarification :**\n${questions.slice(0, 4).map(q => `• ${q}`).join('\n')}`;
@@ -158,9 +163,13 @@ export default function SessionPage() {
         }
       }
 
-      if (s.status === 'genere' || s.status === 'done') {
-        const { svg } = await sessions.svg(id);
-        setSvgContent(svg);
+      if ((s.status === 'genere' || s.status === 'done') && !svgContent) {
+        try { const { svg } = await sessions.svg(id); setSvgContent(svg); } catch { /* ok */ }
+      }
+
+      // Charger le schéma fonctionnel si on a un programme
+      if (s.programme?.espaces?.length) {
+        fetchLayout();
       }
     } catch {
       setError('Impossible de charger la session');
@@ -183,14 +192,14 @@ export default function SessionPage() {
         const surf = (s.programme?.espaces ?? []).reduce((t, e) => t + (e.dimensions?.surface_cible_m2 ?? 0), 0);
         const conf = s.programme?.metadata?.confiance;
         const questions: string[] = s.programme?.metadata?.questions_clarification ?? [];
-
         let msg = s.status === 'erreur'
-          ? 'Erreur lors de l\'analyse du cahier des charges. Essayez de saisir une commande pour démarrer manuellement.'
+          ? 'Erreur lors de l\'analyse. Essayez de saisir une commande pour démarrer manuellement.'
           : `**Programme généré.**\n${nb} espaces · ${nl} liaisons · ~${Math.round(surf)} m²${conf !== undefined ? ` · confiance ${Math.round(conf * 100)} %` : ''}\n\nVous pouvez affiner en dialogue, puis valider pour lancer la génération.`;
         if (s.status !== 'erreur' && questions.length > 0) {
           msg += `\n\n**Questions de clarification :**\n${questions.slice(0, 4).map(q => `• ${q}`).join('\n')}`;
         }
         setMessages(m => [...m, { role: 'assistant', content: msg, timestamp: new Date() }]);
+        if (s.programme?.espaces?.length) fetchLayout();
       } catch { /* silencieux */ }
     }, 3000);
     return () => clearInterval(timer);
@@ -202,11 +211,31 @@ export default function SessionPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Clic sur un espace → pré-remplit l'input
-  const handleSelectEspace = useCallback((espace: Espace) => {
-    setSelectedEspaceId(espace.id);
-    const surf = espace.dimensions?.surface_cible_m2;
-    setInput(`Modifie "${espace.nom}"${surf ? ` (${surf} m²)` : ''} : `);
+  // Clic espace → pré-remplit input
+  const handleSelectEspace = useCallback((espaceOrId: Espace | string, nom?: string) => {
+    let eid: string, enom: string;
+    if (typeof espaceOrId === 'string') {
+      eid = espaceOrId; enom = nom ?? espaceOrId;
+    } else {
+      eid = espaceOrId.id;
+      enom = espaceOrId.nom;
+      nom = (espaceOrId.dimensions?.surface_cible_m2 !== undefined)
+        ? `(${espaceOrId.dimensions.surface_cible_m2} m²)` : undefined;
+    }
+    setSelectedEspaceId(eid);
+    const surfTxt = (typeof espaceOrId !== 'string' && espaceOrId.dimensions?.surface_cible_m2)
+      ? ` (${espaceOrId.dimensions.surface_cible_m2} m²)` : '';
+    setInput(`Modifie "${enom}"${surfTxt} : `);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const len = inputRef.current?.value.length ?? 0;
+      inputRef.current?.setSelectionRange(len, len);
+    }, 50);
+  }, []);
+
+  const handleSelectEspaceFromSvg = useCallback((eid: string, enom: string) => {
+    setSelectedEspaceId(eid);
+    setInput(`Modifie "${enom}" : `);
     setTimeout(() => {
       inputRef.current?.focus();
       const len = inputRef.current?.value.length ?? 0;
@@ -218,8 +247,7 @@ export default function SessionPage() {
 
   async function handleSend() {
     const cmd = input.trim();
-    if (!cmd || sending || !session) return;
-    if (isLocked) return;
+    if (!cmd || sending || !session || isLocked) return;
     setInput('');
     setSelectedEspaceId(undefined);
     setSending(true);
@@ -232,6 +260,8 @@ export default function SessionPage() {
         timestamp: new Date(),
       }]);
       setSession(prev => prev ? { ...prev, programme: result.programme } : prev);
+      // Refresh schéma après chaque commande
+      fetchLayout();
     } catch (e: unknown) {
       setMessages(m => [...m, {
         role: 'assistant',
@@ -292,6 +322,7 @@ export default function SessionPage() {
   const isLocked    = ['schema_valide', 'schema_locked', 'genere', 'done', 'generation_en_cours'].includes(session?.status ?? '');
   const canGenerate = session?.status === 'schema_valide' || session?.status === 'schema_locked';
   const isGenerated = session?.status === 'genere' || session?.status === 'done';
+  const hasProgramme = (session?.programme?.espaces?.length ?? 0) > 0;
 
   if (loading) {
     return (
@@ -315,44 +346,35 @@ export default function SessionPage() {
   return (
     <div className="flex h-screen overflow-hidden">
 
-      {/* ── Left panel — programme ───────────────────────────────────────────── */}
+      {/* ── Panneau gauche ─────────────────────────────────────────────────── */}
       <div className="w-80 flex-shrink-0 border-r border-border bg-surface flex flex-col overflow-hidden">
 
-        {/* Header panneau gauche */}
-        <div
-          className="p-4 border-b border-border flex items-center justify-between cursor-pointer select-none"
-          onClick={() => setProgrammeOpen(o => !o)}
-        >
-          <div className="min-w-0">
-            <p className="text-xs text-muted">Programme spatial</p>
-            <p className="text-sm font-semibold text-white truncate">{session.project_name}</p>
-          </div>
-          {programmeOpen
-            ? <ChevronDown size={16} className="text-muted flex-shrink-0" />
-            : <ChevronRight size={16} className="text-muted flex-shrink-0" />
-          }
+        {/* Header */}
+        <div className="p-4 border-b border-border">
+          <p className="text-xs text-muted">Programme spatial</p>
+          <p className="text-sm font-semibold text-white truncate">{session.project_name}</p>
         </div>
 
-        {/* Badge statut */}
-        <div className="px-4 py-2 flex items-center gap-2">
+        {/* Status + hint */}
+        <div className="px-4 py-2 flex items-center gap-2 border-b border-border/50">
           <span className={clsx(
-            'text-[10px] font-semibold px-2 py-0.5 rounded-full',
-            session.status === 'genere' || session.status === 'done'     ? 'bg-success/20 text-success' :
-            session.status === 'schema_valide'                            ? 'bg-accent/20 text-accent' :
-            session.status === 'generation_en_cours'                      ? 'bg-warning/20 text-warning' :
-            session.status === 'parsing'                                  ? 'bg-blue-500/20 text-blue-400' :
+            'text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0',
+            isGenerated                      ? 'bg-success/20 text-success' :
+            session.status === 'schema_valide' ? 'bg-accent/20 text-accent' :
+            session.status === 'generation_en_cours' ? 'bg-warning/20 text-warning' :
+            session.status === 'parsing'     ? 'bg-blue-500/20 text-blue-400' :
             'bg-muted/20 text-muted'
           )}>
             {STATUS_LABELS[session.status] || session.status}
           </span>
-          {!isLocked && !isParsing && session.programme && (
-            <span className="text-[10px] text-muted/60 flex items-center gap-1">
+          {!isLocked && !isParsing && hasProgramme && (
+            <span className="text-[10px] text-muted/50 flex items-center gap-1">
               <MousePointerClick size={10} /> cliquer un espace
             </span>
           )}
         </div>
 
-        {/* Parsing spinner */}
+        {/* Parsing state */}
         {isParsing && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <Loader2 size={28} className="animate-spin text-accent" />
@@ -361,26 +383,66 @@ export default function SessionPage() {
           </div>
         )}
 
-        {/* Programme viewer */}
-        {!isParsing && programmeOpen && session.programme && (
-          <div className="flex-1 overflow-y-auto p-4">
-            <ProgrammeViewer
-              programme={session.programme}
-              compact
-              onSelectEspace={isLocked ? undefined : handleSelectEspace}
-              selectedEspaceId={selectedEspaceId}
-            />
-          </div>
+        {/* Tabs (espaces / schéma) — seulement si programme disponible */}
+        {!isParsing && hasProgramme && (
+          <>
+            <div className="flex border-b border-border flex-shrink-0">
+              <button
+                onClick={() => setLeftTab('espaces')}
+                className={clsx(
+                  'flex-1 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors',
+                  leftTab === 'espaces'
+                    ? 'text-white border-b-2 border-accent'
+                    : 'text-muted hover:text-white/70'
+                )}
+              >
+                <List size={11} /> Espaces
+              </button>
+              <button
+                onClick={() => setLeftTab('schema')}
+                className={clsx(
+                  'flex-1 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors',
+                  leftTab === 'schema'
+                    ? 'text-white border-b-2 border-accent'
+                    : 'text-muted hover:text-white/70'
+                )}
+              >
+                <LayoutGrid size={11} /> Schéma
+                {layoutLoading && <Loader2 size={9} className="animate-spin" />}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3">
+              {leftTab === 'espaces' && (
+                <ProgrammeViewer
+                  programme={session.programme!}
+                  compact
+                  onSelectEspace={isLocked ? undefined : handleSelectEspace}
+                  selectedEspaceId={selectedEspaceId}
+                />
+              )}
+              {leftTab === 'schema' && (
+                layoutData
+                  ? <SvgSchematic
+                      layout={layoutData}
+                      selectedEspaceId={selectedEspaceId}
+                      onSelectEspace={isLocked ? undefined : handleSelectEspaceFromSvg}
+                    />
+                  : layoutLoading
+                    ? <div className="flex items-center justify-center py-12 gap-2 text-muted text-xs">
+                        <Loader2 size={14} className="animate-spin" /> Calcul du schéma…
+                      </div>
+                    : <div className="text-center py-12 text-muted text-xs">
+                        Schéma non disponible
+                      </div>
+              )}
+            </div>
+          </>
         )}
 
-        {/* SVG result */}
+        {/* SVG téléchargeable après génération */}
         {isGenerated && svgContent && (
-          <div className="border-t border-border p-4">
-            <p className="text-[10px] font-semibold text-white mb-2 uppercase tracking-wider">Layout 2D</p>
-            <div
-              className="w-full bg-canvas rounded-lg overflow-hidden border border-border"
-              dangerouslySetInnerHTML={{ __html: svgContent }}
-            />
+          <div className="border-t border-border p-3 flex-shrink-0">
             <button
               onClick={() => {
                 const blob = new Blob([svgContent], { type: 'image/svg+xml' });
@@ -389,16 +451,16 @@ export default function SessionPage() {
                 a.href = url; a.download = `${session.project_name}.svg`; a.click();
                 URL.revokeObjectURL(url);
               }}
-              className="btn-ghost w-full mt-2 flex items-center justify-center gap-2 text-xs"
+              className="btn-ghost w-full flex items-center justify-center gap-2 text-xs"
             >
-              <Download size={13} /> Télécharger SVG
+              <Download size={12} /> Télécharger SVG généré
             </button>
           </div>
         )}
 
-        {/* Actions bas de panneau */}
-        <div className="p-4 border-t border-border space-y-2">
-          {!isLocked && session.programme?.espaces?.length ? (
+        {/* Actions bas */}
+        <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
+          {!isLocked && hasProgramme && (
             <button
               onClick={handleLock}
               disabled={locking}
@@ -407,7 +469,7 @@ export default function SessionPage() {
               {locking ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
               Valider le schéma
             </button>
-          ) : null}
+          )}
           {canGenerate && (
             <button
               onClick={handleGenerate}
@@ -431,7 +493,7 @@ export default function SessionPage() {
         </div>
       </div>
 
-      {/* ── Right panel — dialogue ───────────────────────────────────────────── */}
+      {/* ── Panneau droit — dialogue ────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
@@ -440,7 +502,11 @@ export default function SessionPage() {
             <h1 className="text-sm font-semibold text-white truncate">{session.project_name}</h1>
             <p className="text-xs text-muted">Dialogue de conception — affinez le programme en langage naturel</p>
           </div>
-          <button onClick={() => load(true)} className="btn-ghost p-2 flex-shrink-0" title="Actualiser">
+          <button
+            onClick={() => load(true)}
+            className="btn-ghost p-2 flex-shrink-0"
+            title="Actualiser"
+          >
             <RotateCcw size={14} />
           </button>
         </div>
@@ -484,11 +550,15 @@ export default function SessionPage() {
 
         {/* Suggestions */}
         {!isLocked && !isParsing && (
-          <div className="px-4 pb-2 flex gap-2 overflow-x-auto flex-shrink-0 scrollbar-none">
+          <div className="px-4 pb-2 flex gap-2 overflow-x-auto flex-shrink-0">
             {suggestions.map(s => (
               <button
                 key={s}
-                onClick={() => { setInput(s); setSelectedEspaceId(undefined); inputRef.current?.focus(); }}
+                onClick={() => {
+                  setInput(s);
+                  setSelectedEspaceId(undefined);
+                  inputRef.current?.focus();
+                }}
                 className="text-[11px] text-muted hover:text-white border border-border hover:border-accent/40 rounded-full px-3 py-1.5 whitespace-nowrap transition-colors flex-shrink-0"
               >
                 {s}
@@ -518,7 +588,10 @@ export default function SessionPage() {
                 rows={2}
                 placeholder='ex. Augmente le séjour à 40 m², ajoute une liaison directe avec la terrasse…'
                 value={input}
-                onChange={e => { setInput(e.target.value); if (!e.target.value) setSelectedEspaceId(undefined); }}
+                onChange={e => {
+                  setInput(e.target.value);
+                  if (!e.target.value) setSelectedEspaceId(undefined);
+                }}
                 disabled={sending}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
