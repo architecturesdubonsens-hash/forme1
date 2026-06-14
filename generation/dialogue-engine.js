@@ -271,7 +271,10 @@ Règles :
 export async function applyCommand(programme, command, options = {}) {
   const {
     apiKey    = process.env.ANTHROPIC_API_KEY,
-    model     = 'claude-sonnet-4-6',
+    // Haiku 4.5 par défaut : opérations atomiques NL→JSON, mode standard (pas de thinking)
+    // Benchmarks : CoT dégrade l'instruction following de 10-30% (arxiv 2505.11423)
+    // Surcharger via DIALOGUE_MODEL=claude-sonnet-4-6 si commandes très complexes
+    model     = process.env.DIALOGUE_MODEL || 'claude-haiku-4-5-20251001',
     maxTokens = 3000
   } = options;
 

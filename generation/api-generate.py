@@ -502,7 +502,10 @@ console.log(JSON.stringify(result));
 """
     result = await _run_node(runner, {
         "sessionId": session_id, "command": request.command,
-        "options": {"forceEdit": request.force_edit}
+        "options": {
+            "forceEdit": request.force_edit,
+            "model": os.environ.get("DIALOGUE_MODEL", "claude-haiku-4-5-20251001"),
+        }
     }, timeout=60)
     return JSONResponse(content=result)
 

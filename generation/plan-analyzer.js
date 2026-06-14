@@ -200,7 +200,9 @@ const QUALITES_VALIDES = new Set([
 export async function analyzePlans(images, options = {}) {
   const {
     apiKey      = process.env.ANTHROPIC_API_KEY,
-    model       = 'claude-sonnet-4-6',
+    // Sonnet par défaut pour la vision (meilleure extraction multimodale)
+    // Surcharger via VISION_MODEL si un modèle alternatif est testé
+    model       = process.env.VISION_MODEL || 'claude-sonnet-4-6',
     typology    = 'autre',
     context     = '',
     maxTokens   = 6000
