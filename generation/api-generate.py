@@ -369,16 +369,19 @@ async def list_templates(
     user_id:   Optional[str]  = Query(None),
     limit:     int            = Query(50, ge=1, le=200)
 ):
-    runner = f"""
+    try:
+        runner = f"""
 import {{ listTemplates }} from '{TYPO_LIB}';
 import {{ readFileSync }} from 'fs';
 const inp = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await listTemplates(inp);
 console.log(JSON.stringify(result));
 """
-    result = await _run_node(runner, {"typology": typology, "is_public": is_public,
-                                      "created_by": user_id, "limit": limit}, timeout=15)
-    return JSONResponse(content=result)
+        result = await _run_node(runner, {"typology": typology, "is_public": is_public,
+                                          "created_by": user_id, "limit": limit}, timeout=15)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(content={"templates": [], "error": str(e)[:200]})
 
 
 @app.get("/library/templates/match")

@@ -44,7 +44,10 @@ export const analysis = {
     save_as_template?: boolean;
     template_nom?: string;
   }): Promise<{ id: string; status: string }> {
-    return req('/analyze-plans', { method: 'POST', body: JSON.stringify(data) });
+    const images = data.images.map(img =>
+      typeof img === 'string' ? { data: img, media_type: 'image/jpeg' } : img
+    );
+    return req('/analyze-plans', { method: 'POST', body: JSON.stringify({ ...data, images }) });
   },
   status(id: string): Promise<AnalysisJob> {
     return req(`/analyze-plans/${id}`);
