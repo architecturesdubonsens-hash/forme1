@@ -509,17 +509,20 @@ console.log(JSON.stringify(result));
 
 
 @app.get("/sessions")
-async def list_sessions(user_id: str = Query(...), status: Optional[str] = Query(None),
+async def list_sessions(user_id: Optional[str] = Query(None), status: Optional[str] = Query(None),
                         limit: int = Query(20, ge=1, le=100)):
-    runner = f"""
+    try:
+        runner = f"""
 import {{ listSessions }} from '{DIALOGUE_ENG}';
 import {{ readFileSync }} from 'fs';
 const {{ userId, status, limit }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await listSessions(userId, {{ status, limit }});
 console.log(JSON.stringify(result));
 """
-    result = await _run_node(runner, {"userId": user_id, "status": status, "limit": limit}, timeout=10)
-    return JSONResponse(content=result)
+        result = await _run_node(runner, {"userId": user_id, "status": status, "limit": limit}, timeout=10)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(content={"sessions": [], "error": str(e)[:200]})
 
 
 @app.get("/sessions/{session_id}")
