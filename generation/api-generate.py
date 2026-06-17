@@ -675,6 +675,11 @@ async def get_session_svg(session_id: str):
 # SANTÉ
 # ===================================================================
 
+@app.get("/version")
+async def version():
+    return {"version": "2026-06-17-v2", "cors": "enabled", "try_except": "all_routes"}
+
+
 @app.get("/health")
 async def health():
     return {

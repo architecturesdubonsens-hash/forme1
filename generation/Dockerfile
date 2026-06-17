@@ -9,9 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gnupg \
     ca-certificates \
-    libglu1-mesa \
-    libgl1 \
-    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Node.js 20 ---
