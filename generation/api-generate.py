@@ -470,7 +470,7 @@ try {{
   }});
   console.log(JSON.stringify({{ ok: true }}));
 }} catch(e) {{
-  await updateSessionProgramme(sessionId, {{}}, {{ status: 'erreur' }});
+  await updateSessionProgramme(sessionId, {{}}, {{ status: 'error' }});
   console.log(JSON.stringify({{ ok: false, error: e.message }}));
 }}
 """
@@ -485,7 +485,7 @@ async def create_session(request: CreateSessionRequest, background_tasks: Backgr
     has_cdc     = bool(request.cdc_texte and request.cdc_texte.strip())
     has_prog    = bool((request.programme or {}).get('espaces'))
     needs_parse = has_cdc and not has_prog
-    initial_status = 'parsing' if needs_parse else 'functional_schema'
+    initial_status = 'analysing' if needs_parse else 'functional_schema'
 
     runner = f"""
 import {{ createSession }} from '{DIALOGUE_ENG}';
@@ -523,9 +523,9 @@ const result = await listSessions(userId, {{ status, limit }});
 console.log(JSON.stringify(result));
 """
         result = await _run_node(runner, {"userId": user_id, "status": status, "limit": limit}, timeout=10)
-        return JSONResponse(content=result)
+        return JSONResponse(content=result if isinstance(result, list) else [])
     except Exception as e:
-        return JSONResponse(content={"sessions": [], "error": str(e)[:200]})
+        return JSONResponse(content=[])
 
 
 @app.get("/sessions/{session_id}")
@@ -592,9 +592,12 @@ const {{ id }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await getSession(id);
 console.log(JSON.stringify(result));
 """
-    session = await _run_node(get_runner, {"id": session_id}, timeout=10)
-    if session.get("status") not in ("schema_locked", "functional_schema", "draft"):
-        raise HTTPException(409, f"Session status incompatible: {session.get('status')}")
+    try:
+        session = await _run_node(get_runner, {"id": session_id}, timeout=10)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)[:500]})
+    if session.get("status") not in ("schema_locked", "functional_schema", "draft", "analysing"):
+        return JSONResponse(status_code=409, content={"error": f"Session status incompatible: {session.get('status')}"})
 
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"job_id": job_id, "status": "queued", "session_id": session_id,
@@ -649,9 +652,12 @@ const emprise = session.emprise || {{ largeur: 20, profondeur: 15 }};
 const layout = resolveLayout(programme, emprise);
 console.log(JSON.stringify(layout));
 """
-    result = await _run_node(runner, {"id": session_id}, timeout=30)
+    try:
+        result = await _run_node(runner, {"id": session_id}, timeout=30)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)[:500]})
     if "error" in result:
-        raise HTTPException(404, result["error"])
+        return JSONResponse(status_code=404, content={"error": result["error"]})
     return JSONResponse(content=result)
 
 
