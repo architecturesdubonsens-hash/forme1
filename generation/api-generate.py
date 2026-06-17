@@ -494,13 +494,16 @@ const inp = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await createSession(inp);
 console.log(JSON.stringify(result));
 """
-    result = await _run_node(runner, {
-        "user_id": request.user_id, "project_name": request.project_name,
-        "cdc_texte": request.cdc_texte, "guide_answers": request.guide_answers,
-        "programme": request.programme, "location": request.location,
-        "emprise": request.emprise, "plu": request.plu, "template_ids": request.template_ids,
-        "status": initial_status
-    }, timeout=15)
+    try:
+        result = await _run_node(runner, {
+            "user_id": request.user_id, "project_name": request.project_name,
+            "cdc_texte": request.cdc_texte, "guide_answers": request.guide_answers,
+            "programme": request.programme, "location": request.location,
+            "emprise": request.emprise, "plu": request.plu, "template_ids": request.template_ids,
+            "status": initial_status
+        }, timeout=15)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)[:500]})
 
     if needs_parse:
         background_tasks.add_task(_parse_cdc_background, result["id"], request.cdc_texte)
@@ -527,47 +530,56 @@ console.log(JSON.stringify(result));
 
 @app.get("/sessions/{session_id}")
 async def get_session(session_id: str):
-    runner = f"""
+    try:
+        runner = f"""
 import {{ getSession }} from '{DIALOGUE_ENG}';
 import {{ readFileSync }} from 'fs';
 const {{ id }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await getSession(id);
 console.log(JSON.stringify(result));
 """
-    result = await _run_node(runner, {"id": session_id}, timeout=10)
-    return JSONResponse(content=result)
+        result = await _run_node(runner, {"id": session_id}, timeout=10)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)[:500]})
 
 
 @app.post("/sessions/{session_id}/command")
 async def apply_dialogue_command(session_id: str, request: DialogueCommandRequest):
-    runner = f"""
+    try:
+        runner = f"""
 import {{ applyCommandAndPersist }} from '{DIALOGUE_ENG}';
 import {{ readFileSync }} from 'fs';
 const {{ sessionId, command, options }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await applyCommandAndPersist(sessionId, command, options);
 console.log(JSON.stringify(result));
 """
-    result = await _run_node(runner, {
-        "sessionId": session_id, "command": request.command,
-        "options": {
-            "forceEdit": request.force_edit,
-            "model": os.environ.get("DIALOGUE_MODEL", "claude-haiku-4-5-20251001"),
-        }
-    }, timeout=60)
-    return JSONResponse(content=result)
+        result = await _run_node(runner, {
+            "sessionId": session_id, "command": request.command,
+            "options": {
+                "forceEdit": request.force_edit,
+                "model": os.environ.get("DIALOGUE_MODEL", "claude-haiku-4-5-20251001"),
+            }
+        }, timeout=60)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)[:500]})
 
 
 @app.post("/sessions/{session_id}/lock")
 async def lock_schema(session_id: str):
-    runner = f"""
+    try:
+        runner = f"""
 import {{ lockFunctionalSchema }} from '{DIALOGUE_ENG}';
 import {{ readFileSync }} from 'fs';
 const {{ id }} = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const result = await lockFunctionalSchema(id);
 console.log(JSON.stringify(result));
 """
-    result = await _run_node(runner, {"id": session_id}, timeout=10)
-    return JSONResponse(content=result)
+        result = await _run_node(runner, {"id": session_id}, timeout=10)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)[:500]})
 
 
 @app.post("/sessions/{session_id}/generate", status_code=202)
