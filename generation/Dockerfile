@@ -19,15 +19,15 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 WORKDIR /app
 
 # --- Python — couche cachée si requirements.txt n'a pas changé ---
-COPY requirements.txt .
+COPY generation/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # --- Node.js — couche cachée si package.json n'a pas changé ---
-COPY package.json .
+COPY generation/package.json .
 RUN npm install --omit=dev
 
 # --- Code applicatif ---
-COPY . .
+COPY generation/ .
 
 # --- Répertoire de sortie des générations ---
 RUN mkdir -p /tmp/generation-output
