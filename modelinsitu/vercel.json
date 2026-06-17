@@ -3,5 +3,11 @@
   "outputDirectory": ".next",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs",
-  "regions": ["cdg1"]
+  "regions": ["cdg1"],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://modelinsitu-backend-production-95b3.up.railway.app/:path*"
+    }
+  ]
 }
