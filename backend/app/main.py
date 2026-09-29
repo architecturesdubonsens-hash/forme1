@@ -7,7 +7,10 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.routers import wearable, program, feedback, challenges, snacks
+from app.logging_config import LoggingMiddleware, setup_logging
 
+# Activer le logging Supabase au démarrage
+setup_logging()
 logger = logging.getLogger("forme1")
 
 
@@ -37,6 +40,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware de journalisation des erreurs 5xx vers Supabase
+app.add_middleware(LoggingMiddleware)
 
 
 # CORS headers présents même sur les erreurs non gérées
