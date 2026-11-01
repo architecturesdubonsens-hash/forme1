@@ -140,3 +140,5 @@ User → Profile → WeeklyPlan → Session → Exercise
 5. **Raccourci iOS** — créer et documenter le Raccourci Apple Watch → webhook
 6. **Moteur d'adaptation v1** — ajustement du programme sur la base du feedback et des données wearable
 7. **Polish UI** — design, animations légères, liens démo exercices
+
+@CLOUD.md
